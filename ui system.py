@@ -53,11 +53,26 @@ def initImages():
 
 app:configAndTools.Core=configAndTools.Core(TITLE,WINDOWPIXELWIDTH,WINDOWPIXELHEIGHT,TILEWIDTH,TILEHEIGHT,TILESIZE,TARGETFPS,TICKRATETARGET,LAYERCOUNT)
 initImages()
-for y in range(TILEHEIGHT):
-    for x in range(TILEWIDTH):
+for x in range(1,TILEWIDTH-1):
+    app.drawTile(IMAGES["border"][0],x,0,0)
+    app.drawTile(IMAGES["border"][0],x,TILEHEIGHT-1,0)
+
+for y in range(1,TILEHEIGHT-1):
+    app.drawTile(IMAGES["border"][1],0,y,0)
+    app.drawTile(IMAGES["border"][1],TILEWIDTH-1,y,0)
+
+app.drawTile(IMAGES["border"][5],0,0,0)
+app.drawTile(IMAGES["border"][2],0,TILEHEIGHT-1,0)
+app.drawTile(IMAGES["border"][3],TILEWIDTH-1,TILEHEIGHT-1,0)
+app.drawTile(IMAGES["border"][4],TILEWIDTH-1,0,0)
+
+
+for y in range(1,TILEHEIGHT-1):
+    for x in range(1,TILEWIDTH-1):
         app.drawTile(IMAGES["terrain"][0],x,y,0)
         if(random.randint(0,5)<4):
             app.drawTile(IMAGES["terrain"][1],x,y,0)
+        app.updateTK()
 app.runTK()
 
 
