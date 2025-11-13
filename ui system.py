@@ -71,7 +71,7 @@ for y in range(1,TILEHEIGHT-1):
     for x in range(1,TILEWIDTH-1):
         app.drawTile(IMAGES["terrain"][0],x,y,0)
         if(random.randint(0,5)<4):
-            app.drawTile(IMAGES["terrain"][1],x,y,0)
+            app.drawTile(IMAGES["terrain"][1],x,y,1)
         app.updateTK()
 app.runTK()
 
