@@ -2,7 +2,7 @@
 #start of full framework rewrite
 import threading
 import tkinter as tk
-
+import PIL
 #this rendering engine is herby designated qdtkr (quick and dirty tkinter renderer)
 
 
@@ -28,7 +28,7 @@ class UIContainer:
         self.unload()
         self.widgetContainer.destroy()
 
-    
+#switch renderer to use pil, and use images as a render target
 
 
 
