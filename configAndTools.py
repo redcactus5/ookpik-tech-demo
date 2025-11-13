@@ -2,7 +2,7 @@
 #start of full framework rewrite
 import threading
 import tkinter as tk
-import PIL
+from PIL import Image, ImageTk
 #this rendering engine is herby designated qdtkr (quick and dirty tkinter renderer)
 
 
@@ -63,42 +63,38 @@ class Core:
 
         #init the container objects 
         #base for everything
-        baseFrame:tk.Frame=tk.Frame(self.root,background="black",border=0,highlightthickness=0,highlightcolor="black",width=self.windowWidth, height=self.windowHeight)
-        baseFrame.pack(anchor=tk.CENTER, expand = False)
+
         #base for canvases
-        canvasFrame:tk.Frame=tk.Frame(baseFrame,background="black",border=4,highlightthickness=0,highlightcolor="black",width=self.windowWidth, height=self.windowHeight)
-        canvasFrame.pack(anchor=tk.CENTER, expand = False)
+        displayFrame:tk.Frame=tk.Frame(self.root,background="black",border=4,highlightthickness=0,highlightcolor="black",width=self.windowWidth, height=self.windowHeight)
+        displayFrame.pack(anchor=tk.CENTER, expand = False)
 
 
 
-        #init the first canvas
-        backgroundCanvas:tk.Canvas=tk.Canvas(canvasFrame,background="grey",border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
-        backgroundCanvas.pack(anchor=tk.CENTER, expand = False)
+        #init the framebuffers
+        self.clearImage:Image.Image=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(200,200,200,255))
+        self.ramFrameBuffer:Image.Image=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0))
+        self.frameBuffer:ImageTk.PhotoImage=ImageTk.PhotoImage(Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)))
+        #init the display widget
+        self.display:tk.Canvas=tk.Canvas(displayFrame,background="grey",border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
+        self.display.pack(anchor=tk.CENTER, expand = False)
 
-        #init the rest of the layers
-        layersProto:list[tk.Canvas]=[backgroundCanvas]
-        
         
         if(layerNumber<1):
-            raise Exception("error: core layer number must be greater than ")
+            raise Exception("error: core layer number must be greater than 0")
 
-        for layerIndex in range(layerNumber-1):
-            #create a frame for the layer
-            tempFrame:tk.Frame=tk.Frame(baseFrame,background=None,border=4,highlightthickness=0,highlightcolor="black",width=self.windowWidth, height=self.windowHeight)
-            tempFrame.pack(anchor=tk.CENTER, expand = False)
-            
-            #create a canvas in that frame
-            tempCanvas:tk.Canvas=tk.Canvas(tempFrame,bg=None,border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
-            tempCanvas.pack(anchor=tk.CENTER, expand = False)
-            #save the canvas to the list
-            layersProto.append(tempCanvas)
-            
+        
 
-        self.layers:tuple[tk.Canvas,...]=tuple(layersProto)
+        #init the layers
+        self.layerObjects:list[Image.Image]=[Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)) for layerobj in range(layerNumber)]
+        
+       
+        
+
+        
 
 
         #create a place to put ui
-        self.uiMount:tk.Frame=tk.Frame(baseFrame,border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
+        self.uiMount:tk.Frame=tk.Frame(displayFrame,border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
         self.uiMount.pack(anchor=tk.CENTER, expand = False)
 
 
@@ -118,45 +114,58 @@ class Core:
     def getCurrentUIContainer(self):
         return self.currentUI
     
-    def _getCanvas(self,layerNumber):
-        if((layerNumber>=0)and(layerNumber<len(self.layers))):
-            return self.layers[layerNumber]
-        else:
-            raise Exception("error: requested canvas id is out of bounds")
-    
+
+
+    def render(self):
+        self.ramFrameBuffer.alpha_composite(self.clearImage)
+        for layer in self.layerObjects:
+            self.ramFrameBuffer.alpha_composite(layer)
+        self.frameBuffer=ImageTk.PhotoImage(self.ramFrameBuffer)
+        #put render code here
+        
     
     def clearAllLayers(self):
-        for layer in self.layers:
-            layer.delete("all")
+        self.layerObjects:list[Image.Image]=[Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)) for layerobj in range(len(self.layerObjects))]
 
     def clearLayer(self,layerNumber):
-        if((layerNumber>=0)and(layerNumber<len(self.layers))):
-            target:tk.Canvas=self.layers[layerNumber]
-            target.delete("all")
+        if((layerNumber>=0)and(layerNumber<len(self.layerObjects))):
+            
+            self.layerObjects[layerNumber]=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0))
         else:
             raise Exception("error: requested layer id is out of bounds")
-    
-    def drawSprite(self,texture:tk.PhotoImage,imageSize:int,x:int,y:int,layer:int): 
-        if((layer>=0)and(layer<len(self.layers))):#safety check
+        
+    def drawDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
+        for item in displayList:
+            if((item[3]>=0)and(item[3]<len(self.layerObjects))):#safety check
+                #grab the layer
+                target:Image.Image=self.layerObjects[item[3]]
+                #draw
+                target.paste(item[0],(item[1],item[2]),item[0])
+            else:
+                raise Exception("error: requested canvas id is out of bounds")
+        
+    def drawSprite(self,texture:Image.Image,x:int,y:int,layer:int): 
+        if((layer>=0)and(layer<len(self.layerObjects))):#safety check
             #grab the layer
-            target:tk.Canvas=self.layers[layer]
+            target:Image.Image=self.layerObjects[layer]
             #draw
-            target.create_image(((x*imageSize)+(imageSize/2),(y*imageSize)+(imageSize/2)),image=texture)
+            target.paste(texture,(x,y),texture)
         else:
             raise Exception("error: requested canvas id is out of bounds")
 
-    def drawTile(self,texture:tk.PhotoImage,tileX:int,tileY:int,layer:int):
-        if((layer>=0)and(layer<len(self.layers))):#safety check
+    def drawTile(self,texture:Image.Image,tileX:int,tileY:int,layer:int):
+        if((layer>=0)and(layer<len(self.layerObjects))):#safety check
             #two more safety checks
             if((tileX<0)or(tileX>self.tileWidth)):
                 raise Exception("error: tileX:"+str(tileX)+" is out of bounds")
             elif((tileY<0)or(tileY>self.tileHeight)):
                 raise Exception("error: tileY:"+str(tileY)+" is out of bounds")
-
             #grab the layer
-            target:tk.Canvas=self.layers[layer]
+            target:Image.Image=self.layerObjects[layer]
             #draw
-            target.create_image(((tileX*self.tileSize)+(self.tileSize/2),(tileY*self.tileSize)+(self.tileSize/2)),image=texture)
+            target.paste(texture,((tileX*self.tileSize),(tileY*self.tileSize)),texture)
+            #draw
+            
         else:
             raise Exception("error: requested canvas id is out of bounds")
 
