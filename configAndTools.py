@@ -38,29 +38,27 @@ class Renderer:
         self.displayWidth=displayWidth
         self.displayHeight=displayHeight
         self.clearColor=clearColor
-        #our three main surfaces, dont mind them, they are just here for the backend
+        #our two main surfaces, dont mind them, they are just here for the backend
         self.screen:pygame.Surface = pygame.Surface((0,0))
         self.frameBuffer:pygame.Surface = pygame.Surface((0,0))
         #flags for controlling what gets rendered and when
-        self.currentFrame=False
-        self.lastFrame=True
+        self.frameChanged=True
         self.lastSize=(0,0)
         
 
 
 
     def frameTick(self) -> None:
-        #get the current screen size
-        currentSize=self.screen.get_size()
-        if((self.lastFrame!=self.currentFrame)or((self.lastSize[0]!=currentSize[0])or(self.lastSize[1]!=currentSize[1]))):
-            pygame.transform.smoothscale(self.frameBuffer,currentSize,self.screen)
+        screenSize=self.screen.get_size()
+        if(self.frameChanged or (self.lastSize!=screenSize)):
+            self.lastSize=screenSize
+            pygame.transform.smoothscale(self.frameBuffer,screenSize,self.screen)
             pygame.display.flip()
 
  
 
-
     def render(self) -> None:
-        self.currentFrame=(not self.currentFrame)
+        self.frameChanged=True
         pass
         
         
