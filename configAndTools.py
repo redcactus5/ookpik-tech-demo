@@ -10,13 +10,15 @@ from PIL import Image, ImageTk
 class UIContainer:
     def __init__(self) -> None:
         self.widgetContainer=None
+        self.core:Core=None
         
     def load(self):
         pass
 
-    def _load(self,mount:tk.Frame,windowSize:tuple):#internal function called by the core, that inits internal stuff first, then calls the user init function
+    def _load(self,mount:tk.Frame,windowSize:tuple, core:Core):#internal function called by the core, that inits internal stuff first, then calls the user init function
         self.widgetContainer:tk.Frame=tk.Frame(mount,border=0,highlightthickness=0,width=windowSize[0], height=windowSize[1])
         self.widgetContainer.pack(anchor=tk.CENTER, expand = False)
+        self.core=core
         self.load()
     
 
@@ -27,6 +29,7 @@ class UIContainer:
         self.unload()
         self.widgetContainer.destroy()
         self.widgetContainer=None
+        self.core=None
 
 
 
@@ -115,7 +118,7 @@ class Core:
         #store the new one
         self.currentUI=uiObject
         #init the new one
-        self.currentUI._load(self.uiMount,self.getWindowSize())
+        self.currentUI._load(self.uiMount,self.getWindowSize(),self)
         
     def getCurrentUIContainer(self):
         return self.currentUI
@@ -152,61 +155,40 @@ class Core:
             layer.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
 
     def clearLayer(self,layerNumber):
-        if((layerNumber>=0)and(layerNumber<len(self.layerObjects))):
             target:Image.Image=self.layerObjects[layerNumber]
             target.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
-        else:
-            raise Exception("error: requested layer id is out of bounds")
+
         
     def drawSpriteDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
         for item in displayList:
-            if((item[3]>=0)and(item[3]<len(self.layerObjects))):#safety check
-                #grab the layer
-                target:Image.Image=self.layerObjects[item[3]]
-                #draw the image
-                target.paste(item[0],(item[1],item[2]),item[0])
-            else:
-                raise Exception("error: requested canvas id is out of bounds")
+
+            #grab the layer
+            target:Image.Image=self.layerObjects[item[3]]
+            #draw the image
+            target.paste(item[0],(item[1],item[2]),item[0])
+
         
     def drawSprite(self,texture:Image.Image,x:int,y:int,layer:int): 
-        if((layer>=0)and(layer<len(self.layerObjects))):#safety check
-            #grab the layer
-            target:Image.Image=self.layerObjects[layer]
-            #draw
-            target.paste(texture,(x,y),texture)
-        else:
-            raise Exception("error: requested canvas id is out of bounds")
+        #grab the layer
+        target:Image.Image=self.layerObjects[layer]
+        #draw
+        target.paste(texture,(x,y),texture)
+
 
     def drawTileDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
         for item in displayList:
-            if((item[3]>=0)and(item[3]<len(self.layerObjects))):#safety check
-                #two more safety checks
-                if((item[1]<0)or(item[1]>self.tileWidth)):
-                    raise Exception("error: tileX:"+str(item[1])+" is out of bounds")
-                elif((item[2]<0)or(item[2]>self.tileHeight)):
-                    raise Exception("error: tileY:"+str(item[2])+" is out of bounds")
-                #grab the layer
-                target:Image.Image=self.layerObjects[item[3]]
-                #draw the image
-                target.paste(item[0],(item[1]*self.tileSize,item[2]*self.tileSize),item[0])
-            else:
-                raise Exception("error: requested canvas id is out of bounds")
+            target:Image.Image=self.layerObjects[item[3]]
+            #draw the image
+            target.paste(item[0],(item[1]*self.tileSize,item[2]*self.tileSize),item[0])
+
 
     def drawTile(self,texture:Image.Image,tileX:int,tileY:int,layer:int):
-        if((layer>=0)and(layer<len(self.layerObjects))):#safety check
-            #two more safety checks
-            if((tileX<0)or(tileX>self.tileWidth)):
-                raise Exception("error: tileX:"+str(tileX)+" is out of bounds")
-            elif((tileY<0)or(tileY>self.tileHeight)):
-                raise Exception("error: tileY:"+str(tileY)+" is out of bounds")
-            #grab the layer
-            target:Image.Image=self.layerObjects[layer]
-            #draw
-            target.paste(texture,((tileX*self.tileSize),(tileY*self.tileSize)),texture)
-            
-            
-        else:
-            raise Exception("error: requested canvas id is out of bounds")
+
+        #grab the layer
+        target:Image.Image=self.layerObjects[layer]
+        #draw
+        target.paste(texture,((tileX*self.tileSize),(tileY*self.tileSize)),texture)
+
 
     def getRoot(self):
         if(isinstance(self.root,tk.Tk)):
