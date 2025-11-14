@@ -1,220 +1,126 @@
 
 #start of full framework rewrite
 import threading
-import tkinter as tk
-from PIL import Image, ImageTk
+import pygame
+import pygame_gui
 
 
 #need to rewrite to use pygame
 
-class UIContainer:
-    def __init__(self) -> None:
-        self.widgetContainer=None
-        self.core:Core=None
+#arcitecture: render object with layers via sprite groups, core engine, menu objects via pygame gui, generator object for genration code, event handler object
+
+
+
         
-    def load(self):
+class EventHandler:
+    def __init__(self) -> None:
         pass
 
-    def _load(self,mount:tk.Frame,windowSize:tuple, core:Core):#internal function called by the core, that inits internal stuff first, then calls the user init function
-        self.widgetContainer:tk.Frame=tk.Frame(mount,border=0,highlightthickness=0,width=windowSize[0], height=windowSize[1])
-        self.widgetContainer.pack(anchor=tk.CENTER, expand = False)
-        self.core=core
-        self.load()
-    
-
-    def unload(self):
+    def scanEvent(self, event:pygame.Event):
         pass
 
-    def _destroy(self):
-        self.unload()
-        self.widgetContainer.destroy()
-        self.widgetContainer=None
-        self.core=None
+class GameLogic:
+    def __init__(self) -> None:
+        pass
+        
+    def frameTick(self) -> None:
+        pass
 
+    def unlockedTick(self) ->None:
+        pass
+
+    def start(self) -> None:
+        pass
+
+class Renderer:
+    def __init__(self,displayWidth, displayHeight, clearColor) -> None:
+        #config stuff
+        self.displayWidth=displayWidth
+        self.displayHeight=displayHeight
+        self.clearColor=clearColor
+        #our three main surfaces, dont mind them, they are just here for the backend
+        self.screen:pygame.Surface = pygame.Surface((0,0))
+        self.frameBuffer:pygame.Surface = pygame.Surface((0,0))
+        #flags for controlling what gets rendered and when
+        self.currentFrame=False
+        self.lastFrame=True
+        self.lastSize=(0,0)
+        
+
+
+
+    def frameTick(self) -> None:
+        #get the current screen size
+        currentSize=self.screen.get_size()
+        if((self.lastFrame!=self.currentFrame)or((self.lastSize[0]!=currentSize[0])or(self.lastSize[1]!=currentSize[1]))):
+            pygame.transform.smoothscale(self.frameBuffer,currentSize,self.screen)
+            pygame.display.flip()
+
+ 
+
+
+    def render(self) -> None:
+        self.currentFrame=(not self.currentFrame)
+        pass
+        
+        
+
+    def start(self) -> None:
+        self.screen=pygame.display.set_mode(size=(self.displayWidth, self.displayHeight),vsync=1,flags=pygame.SCALED|pygame.RESIZABLE)
+        self.frameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
+
+        
 
 
 
 
 class Core:
-    def __init__(self,title:str,windowWidth:int,windowHeight:int,tileWidth:int,tileHeight:int,tileSize:int,targetFPS:int,targetTickRate:int, layerNumber:int=1) -> None:
-        #init my useful variables
-        self.windowWidth:int=windowWidth
-        self.windowHeight:int=windowHeight
-        self.title:str=title
-        self.targetFPS=targetFPS
-        self.targetTickRate=targetTickRate
-        self.tileWidth=tileWidth
-        self.tileHeight=tileHeight
-        self.tileSize=tileSize
+    def __init__(self,eventHandler:EventHandler,gameLogic:GameLogic,renderer:Renderer,targetFps:int) -> None:
+        #pygame stuff
+        pygame.init()
+        self.clock:pygame.time.Clock=pygame.time.Clock()
 
+        #custom objects to farm out key logic blocks
+        self.eventHandler=eventHandler
+        self.gameLogic=gameLogic
+        self.renderer=renderer
 
-        self.pause=False
+        #config variables
+        self.targetFps=targetFps
 
-        #root object creation
-        self.root:tk.Tk=tk.Tk()
-
-
-        #config root
-        self.root.title(self.title)
-        self.root.geometry(str(self.windowWidth+8)+"x"+str(self.windowHeight+8))
-        self.root.resizable(width=False, height=False)
-
-        #variable for storing the current menu
-        self.currentUI:UIContainer=UIContainer()
+        #runtime variables
+        self.running=False
+        self.deltaTime:float=0
+        
+        
         
 
 
-        
-        
-
-        #base for canvases
-        displayFrame:tk.Frame=tk.Frame(self.root,background="black",border=4,highlightthickness=0,highlightcolor="black",width=self.windowWidth, height=self.windowHeight)
-        displayFrame.pack(anchor=tk.CENTER, expand = False)
-
-
-
-        #init the framebuffer
-        #the framebuffer pil image
-        self.frameBuffer:Image.Image=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0))
-        #the framebuffer tk image
-        self.frameCache0:ImageTk.PhotoImage=ImageTk.PhotoImage(Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)))
-        self.frameCache1:ImageTk.PhotoImage=ImageTk.PhotoImage(Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)))
-        self.currentCache:bool=False
-        #init the display widget
-        self.display:tk.Canvas=tk.Canvas(displayFrame,background="grey",border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
-        self.display.pack(anchor=tk.CENTER, expand = False)
-        #keep track of who the framebuffer is
-        self.frameBufferID=self.display.create_image((0, 0), anchor="nw", image=self.frameCache0)
-        
-
-
-        if(layerNumber<1):
-            raise Exception("error: core layer number must be greater than 0")
-
-        
-
-        #init the layers
-        self.layerObjects:list[Image.Image]=[Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)) for layerobj in range(layerNumber)]
-        
-       
-
-
-        #create a place to put ui
-        self.uiMount:tk.Frame=tk.Frame(displayFrame,border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
-        self.uiMount.pack(anchor=tk.CENTER, expand = False)
-
-
-        #start the running
+    def run(self):
         self.running=True
-
-    def getWindowSize(self):#self explanitory
-        return (self.windowWidth,self.windowHeight)
-
-
-
-    def loadUIContainer(self,uiObject:UIContainer):
-        #destroy the old one
-        self.currentUI._destroy()
-        #store the new one
-        self.currentUI=uiObject
-        #init the new one
-        self.currentUI._load(self.uiMount,self.getWindowSize(),self)
+        self.renderer.start()
+        self.gameLogic.start()
         
-    def getCurrentUIContainer(self):
-        return self.currentUI
-    
+        while(self.running):
+            for event in pygame.event.get():
+                if(event.type==pygame.QUIT):
+                    self.running=False
+                    break
+                self.eventHandler.scanEvent(event)
+            
+            self.gameLogic.frameTick()
+
+            self.renderer.frameTick()
+
+            self.deltaTime= self.clock.tick(self.targetFps) / 1000
 
 
-    def render(self):
-        #clear the framebuffer
-        self.frameBuffer.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
-        #combine all the layers into one image
-        for layer in self.layerObjects:
-            self.frameBuffer.alpha_composite(layer)
-        #create convert the pil image to a tkinter image and put it in the framecache
-        if(self.currentCache):
-            #update the alternate framecache
-            self.frameCache0.paste(self.frameBuffer)
-            #update the currently displayed frame
-            self.display.itemconfig(self.frameBufferID,image=self.frameCache0)
-            #toggle the active framecache
-            self.currentCache=False
-        else:
-            #update the alternate framecache
-            self.frameCache1.paste(self.frameBuffer)
-            #update the currently displayed frame
-            self.display.itemconfig(self.frameBufferID,image=self.frameCache1)
-            #toggle the active framecache
-            self.currentCache=True
+        pygame.quit()
+            
 
 
-        
-    
-    def clearAllLayers(self):
-        for layer in self.layerObjects:
-            layer.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
-
-    def clearLayer(self,layerNumber):
-            target:Image.Image=self.layerObjects[layerNumber]
-            target.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
-
-        
-    def drawSpriteDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
-        for item in displayList:
-
-            #grab the layer
-            target:Image.Image=self.layerObjects[item[3]]
-            #draw the image
-            target.paste(item[0],(item[1],item[2]),item[0])
-
-        
-    def drawSprite(self,texture:Image.Image,x:int,y:int,layer:int): 
-        #grab the layer
-        target:Image.Image=self.layerObjects[layer]
-        #draw
-        target.paste(texture,(x,y),texture)
 
 
-    def drawTileDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
-        for item in displayList:
-            target:Image.Image=self.layerObjects[item[3]]
-            #draw the image
-            target.paste(item[0],(item[1]*self.tileSize,item[2]*self.tileSize),item[0])
-
-
-    def drawTile(self,texture:Image.Image,tileX:int,tileY:int,layer:int):
-
-        #grab the layer
-        target:Image.Image=self.layerObjects[layer]
-        #draw
-        target.paste(texture,((tileX*self.tileSize),(tileY*self.tileSize)),texture)
-
-
-    def getRoot(self):
-        if(isinstance(self.root,tk.Tk)):
-            return self.root
-        else:
-            raise Exception("error: root widget not created yet")
-
-    def quitApp(self):
-        #if the root exists, destroy it
-        if(isinstance(self.root,tk.Tk)):
-            self.root.destroy()
-            self.root=None
-            self.currentUI=None
-
-    def updateTK(self): 
-        
-        self.root.update()
-        self.root.update_idletasks()
-        
-
-    def runTK(self):
-        self.root.mainloop()
-
-
-    
-        
 
 
 
