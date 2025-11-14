@@ -6,10 +6,9 @@ from PIL import Image, ImageTk
 #this rendering engine is herby designated qdtkr (quick and dirty tkinter renderer)
 
 
-#creation automatically loads the ui due to technical reasons
+
 class UIContainer:
     def __init__(self) -> None:
-        pass
         self.widgetContainer=None
         
     def load(self):
@@ -27,21 +26,22 @@ class UIContainer:
     def _destroy(self):
         self.unload()
         self.widgetContainer.destroy()
+        self.widgetContainer=None
 
-#switch renderer to use pil, and use images as a render target
+
 
 
 
 class Core:
-    def __init__(self,title:str,windowWidth:int,WindowHeight:int,TileWidth:int,TileHeight:int,tileSize:int,targetFPS:int,targetTickRate:int, layerNumber:int=1) -> None:
-        #init tkinter
+    def __init__(self,title:str,windowWidth:int,windowHeight:int,tileWidth:int,tileHeight:int,tileSize:int,targetFPS:int,targetTickRate:int, layerNumber:int=1) -> None:
+        #init my useful variables
         self.windowWidth:int=windowWidth
-        self.windowHeight:int=WindowHeight
+        self.windowHeight:int=windowHeight
         self.title:str=title
         self.targetFPS=targetFPS
         self.targetTickRate=targetTickRate
-        self.tileWidth=TileWidth
-        self.tileHeight=TileHeight
+        self.tileWidth=tileWidth
+        self.tileHeight=tileHeight
         self.tileSize=tileSize
 
 
@@ -61,8 +61,8 @@ class Core:
         
 
 
-        #init the container objects 
-        #base for everything
+        
+        
 
         #base for canvases
         displayFrame:tk.Frame=tk.Frame(self.root,background="black",border=4,highlightthickness=0,highlightcolor="black",width=self.windowWidth, height=self.windowHeight)
@@ -70,15 +70,21 @@ class Core:
 
 
 
-        #init the framebuffers
-        self.clearImage:Image.Image=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(200,200,200,255))
-        self.ramFrameBuffer:Image.Image=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0))
-        self.frameBuffer:ImageTk.PhotoImage=ImageTk.PhotoImage(Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)))
+        #init the framebuffer
+        #the framebuffer pil image
+        self.frameBuffer:Image.Image=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0))
+        #the framebuffer tk image
+        self.frameCache0:ImageTk.PhotoImage=ImageTk.PhotoImage(Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)))
+        self.frameCache1:ImageTk.PhotoImage=ImageTk.PhotoImage(Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)))
+        self.currentCache:bool=False
         #init the display widget
         self.display:tk.Canvas=tk.Canvas(displayFrame,background="grey",border=0,highlightthickness=0,width=self.windowWidth, height=self.windowHeight)
         self.display.pack(anchor=tk.CENTER, expand = False)
-
+        #keep track of who the framebuffer is
+        self.frameBufferID=self.display.create_image((0, 0), anchor="nw", image=self.frameCache0)
         
+
+
         if(layerNumber<1):
             raise Exception("error: core layer number must be greater than 0")
 
@@ -88,9 +94,6 @@ class Core:
         self.layerObjects:list[Image.Image]=[Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)) for layerobj in range(layerNumber)]
         
        
-        
-
-        
 
 
         #create a place to put ui
@@ -107,8 +110,11 @@ class Core:
 
 
     def loadUIContainer(self,uiObject:UIContainer):
+        #destroy the old one
         self.currentUI._destroy()
+        #store the new one
         self.currentUI=uiObject
+        #init the new one
         self.currentUI._load(self.uiMount,self.getWindowSize())
         
     def getCurrentUIContainer(self):
@@ -117,29 +123,47 @@ class Core:
 
 
     def render(self):
-        self.ramFrameBuffer.alpha_composite(self.clearImage)
+        #clear the framebuffer
+        self.frameBuffer.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
+        #combine all the layers into one image
         for layer in self.layerObjects:
-            self.ramFrameBuffer.alpha_composite(layer)
-        self.frameBuffer=ImageTk.PhotoImage(self.ramFrameBuffer)
-        #put render code here
+            self.frameBuffer.alpha_composite(layer)
+        #create convert the pil image to a tkinter image and put it in the framecache
+        if(self.currentCache):
+            #update the alternate framecache
+            self.frameCache0.paste(self.frameBuffer)
+            #update the currently displayed frame
+            self.display.itemconfig(self.frameBufferID,image=self.frameCache0)
+            #toggle the active framecache
+            self.currentCache=False
+        else:
+            #update the alternate framecache
+            self.frameCache1.paste(self.frameBuffer)
+            #update the currently displayed frame
+            self.display.itemconfig(self.frameBufferID,image=self.frameCache1)
+            #toggle the active framecache
+            self.currentCache=True
+
+
         
     
     def clearAllLayers(self):
-        self.layerObjects:list[Image.Image]=[Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0)) for layerobj in range(len(self.layerObjects))]
+        for layer in self.layerObjects:
+            layer.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
 
     def clearLayer(self,layerNumber):
         if((layerNumber>=0)and(layerNumber<len(self.layerObjects))):
-            
-            self.layerObjects[layerNumber]=Image.new(mode="RGBA",size=(self.windowWidth,self.windowHeight),color=(0,0,0,0))
+            target:Image.Image=self.layerObjects[layerNumber]
+            target.paste((0,0,0,0), (0, 0, self.windowWidth, self.windowHeight))
         else:
             raise Exception("error: requested layer id is out of bounds")
         
-    def drawDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
+    def drawSpriteDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
         for item in displayList:
             if((item[3]>=0)and(item[3]<len(self.layerObjects))):#safety check
                 #grab the layer
                 target:Image.Image=self.layerObjects[item[3]]
-                #draw
+                #draw the image
                 target.paste(item[0],(item[1],item[2]),item[0])
             else:
                 raise Exception("error: requested canvas id is out of bounds")
@@ -153,6 +177,21 @@ class Core:
         else:
             raise Exception("error: requested canvas id is out of bounds")
 
+    def drawTileDisplayList(self,displayList:list[tuple[Image.Image,int,int,int]]):
+        for item in displayList:
+            if((item[3]>=0)and(item[3]<len(self.layerObjects))):#safety check
+                #two more safety checks
+                if((item[1]<0)or(item[1]>self.tileWidth)):
+                    raise Exception("error: tileX:"+str(item[1])+" is out of bounds")
+                elif((item[2]<0)or(item[2]>self.tileHeight)):
+                    raise Exception("error: tileY:"+str(item[2])+" is out of bounds")
+                #grab the layer
+                target:Image.Image=self.layerObjects[item[3]]
+                #draw the image
+                target.paste(item[0],(item[1]*self.tileSize,item[2]*self.tileSize),item[0])
+            else:
+                raise Exception("error: requested canvas id is out of bounds")
+
     def drawTile(self,texture:Image.Image,tileX:int,tileY:int,layer:int):
         if((layer>=0)and(layer<len(self.layerObjects))):#safety check
             #two more safety checks
@@ -164,10 +203,16 @@ class Core:
             target:Image.Image=self.layerObjects[layer]
             #draw
             target.paste(texture,((tileX*self.tileSize),(tileY*self.tileSize)),texture)
-            #draw
+            
             
         else:
             raise Exception("error: requested canvas id is out of bounds")
+
+    def getRoot(self):
+        if(isinstance(self.root,tk.Tk)):
+            return self.root
+        else:
+            raise Exception("error: root widget not created yet")
 
     def quitApp(self):
         #if the root exists, destroy it
@@ -177,14 +222,13 @@ class Core:
             self.currentUI=None
 
     def updateTK(self): 
-        if(isinstance(self.root,tk.Tk)):
-            self.root.update()
-            self.root.update_idletasks()
+        
+        self.root.update()
+        self.root.update_idletasks()
         
 
     def runTK(self):
-        if(isinstance(self.root,tk.Tk)):
-            self.root.mainloop()
+        self.root.mainloop()
 
 
     
