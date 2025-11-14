@@ -3,9 +3,9 @@
 import threading
 import tkinter as tk
 from PIL import Image, ImageTk
-#this rendering engine is herby designated qdtkr (quick and dirty tkinter renderer)
 
 
+#need to rewrite to use pygame
 
 class UIContainer:
     def __init__(self) -> None:
