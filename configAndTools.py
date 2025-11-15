@@ -34,61 +34,6 @@ class GameLogic:
 
 
 
-class BasicSprite(pygame.sprite.Sprite):
-    def __init__(self,x,y,image:pygame.surface.Surface) -> None:
-        super().__init__()
-        #init texture
-        self.currentTexture:pygame.surface.Surface=image
-        self.image:pygame.surface.Surface=self.currentTexture
-        self.rect:pygame.rect.Rect=self.image.get_rect()
-        #init pos and visibility
-        self.visible=True
-        self.x=x
-        self.y=y
-        #init image pos
-        self.rect.x=self.x
-        self.rect.y=self.y
-
-    def hide(self):
-        if(self.visible):
-            self.visible=False
-
-    def show(self):
-        if(not self.visible):
-            self.visible=True
-
-    def changeTexture(self, newTexture:pygame.surface.Surface):
-        self.currentTexture=newTexture
-        self.image=newTexture
-        self.rect=self.currentTexture.get_rect()
-        self.rect.x=self.x
-        self.rect.y=self.y
-
-    def setPos(self,x,y):
-        self.x=x
-        self.y=y
-        self.rect.x=self.x
-        self.rect.y=self.y
-
-
-    def move(self,x,y):
-        self.x=(self.x+x)
-        self.y=(self.y+y)
-        self.rect.x=self.x
-        self.rect.y=self.y
-
-    def
-            
-            
-            
-
-
-            
-
-
-
-
-
 class Camera:
     def __init__(self,x,y,width,height) -> None:
         self.viewport=pygame.rect.Rect(x,y,width,height)
@@ -111,7 +56,61 @@ class Camera:
     
 
 
-    
+
+class BasicSprite(pygame.sprite.Sprite):
+    def __init__(self,x,y,image:pygame.surface.Surface) -> None:
+        super().__init__()
+        #init texture
+        self.currentTexture:pygame.surface.Surface=image
+        self.image:pygame.surface.Surface=self.currentTexture
+        self.rect:pygame.rect.Rect=self.image.get_rect()
+        #init pos and visibility
+        self.visible=True
+        self.x=x
+        self.y=y
+        #init image pos
+        self.rect.x=self.x
+        self.rect.y=self.y
+
+    def hide(self):
+        if(self.visible):
+            self.visible=False
+            self.image=pygame.surface.Surface((self.rect.width,self.rect.height))
+            self.rect=self.image.get_rect()
+            self.rect.x=self.x
+            self.rect.y=self.y
+            
+
+    def show(self):
+        if(not self.visible):
+            self.visible=True
+            self.image=self.currentTexture
+            self.rect=self.image.get_rect()
+            self.rect.x=self.x
+            self.rect.y=self.y
+
+    def changeTexture(self, newTexture:pygame.surface.Surface):
+        self.currentTexture=newTexture
+        self.image=newTexture
+        self.rect=self.currentTexture.get_rect()
+        self.rect.x=self.x
+        self.rect.y=self.y
+
+    def setPos(self,x,y):
+        self.x=x
+        self.y=y
+        self.rect.x=self.x
+        self.rect.y=self.y
+
+
+    def move(self,x,y):
+        self.x=(self.x+x)
+        self.y=(self.y+y)
+        self.rect.x=self.x
+        self.rect.y=self.y
+
+
+
 
 
 class Renderer:
@@ -134,7 +133,7 @@ class Renderer:
         
 
         #camera feature
-        self.camera=Camera(0,0)
+        self.camera:Camera=Camera(0,0,self.displayWidth,self.displayHeight)
 
         #placeholder for menu stuff
         
@@ -153,11 +152,9 @@ class Renderer:
  
 
     def render(self) -> None:
-        
-        for layer in self.layers:
-            layer.update(0,(self.camera.getPos()))
-            layer.draw(self.frameBuffer)
-
+        #hyperoptimized render code
+        displayList=[(sprite.image, (sprite.x - self.camera.viewport.x, sprite.y - self.camera.viewport.y)) for layer in self.layers for sprite in layer.sprites() if(sprite.rect.colliderect(self.camera.viewport))]
+        self.frameBuffer.blits(displayList)
         self.frameChanged=True
         #put render menu code here
 
