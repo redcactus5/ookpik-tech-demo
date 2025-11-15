@@ -137,9 +137,7 @@ class Renderer:
 
         #placeholder for menu stuff
         
-        
-
-
+  
 
     def frameTick(self) -> None:
         screenSize=self.screen.get_size()
