@@ -35,7 +35,7 @@ class GameLogic:
 
 
 class BasicSprite(pygame.sprite.Sprite):
-    def __init__(self,x,y,image:pygame.surface.Surface,cameraX,cameraY) -> None:
+    def __init__(self,x,y,image:pygame.surface.Surface) -> None:
         super().__init__()
         #init texture
         self.currentTexture:pygame.surface.Surface=image
@@ -45,42 +45,44 @@ class BasicSprite(pygame.sprite.Sprite):
         self.visible=True
         self.x=x
         self.y=y
-        self.cameraX=cameraX
-        self.cameraY=cameraY
         #init image pos
-        self.rect.x=self.x-self.cameraX
-        self.rect.y=self.y-self.cameraY
+        self.rect.x=self.x
+        self.rect.y=self.y
 
     def hide(self):
         if(self.visible):
-            self.currentTexture=self.image
-            self.image=pygame.surface.Surface((self.rect.width,self.rect.height))
+            self.visible=False
 
     def show(self):
         if(not self.visible):
-            self.image=self.currentTexture
+            self.visible=True
 
     def changeTexture(self, newTexture:pygame.surface.Surface):
         self.currentTexture=newTexture
-        if(self.visible):
-            self.image=newTexture
+        self.image=newTexture
         self.rect=self.currentTexture.get_rect()
-        self.rect.x=self.x-self.cameraX
-        self.rect.y=self.y-self.cameraY
+        self.rect.x=self.x
+        self.rect.y=self.y
 
     def setPos(self,x,y):
-        self.rect.x=x-self.cameraX
-        self.rect.y=y-self.cameraY
+        self.x=x
+        self.y=y
+        self.rect.x=self.x
+        self.rect.y=self.y
+
 
     def move(self,x,y):
-        self.rect.x
+        self.x=(self.x+x)
+        self.y=(self.y+y)
+        self.rect.x=self.x
+        self.rect.y=self.y
 
-    def update(self, operation:int,argumentTuple:tuple) -> None:
-        if(operation==0):
-            self.cameraX=argumentTuple[0]
-            self.cameraY=argumentTuple[1]
-            self.rect.x=self.x-self.cameraX
-            self.rect.y=self.y-self.cameraY
+    def
+            
+            
+            
+
+
             
 
 
@@ -88,16 +90,26 @@ class BasicSprite(pygame.sprite.Sprite):
 
 
 class Camera:
-    def __init__(self,x,y) -> None:
-        self.x=x
-        self.y=y
+    def __init__(self,x,y,width,height) -> None:
+        self.viewport=pygame.rect.Rect(x,y,width,height)
 
     def getPos(self):
-        return (self.x, self.y)
+        return (self.viewport.x, self.viewport.y)
     
     def setPos(self,x,y):
-        self.x=x
-        self.y=y
+        self.viewport.x=x
+        self.viewport.y=y
+    
+    def move(self,x,y):
+        self.viewport.x+=x
+        self.viewport.y+=y
+
+    def getRect(self):#lol
+        return self.viewport
+
+
+    
+
 
     
 
@@ -118,11 +130,14 @@ class Renderer:
         #sprite layer stuff, because everything is a sprite
         self.layerCount:int=layers
         self.layers:list[pygame.sprite.Group]=[pygame.sprite.Group() for l in range(layers)]
+        
+        
 
+        #camera feature
         self.camera=Camera(0,0)
 
-        #placeholder
-        self.uiContainer=None
+        #placeholder for menu stuff
+        
         
 
 
@@ -131,7 +146,6 @@ class Renderer:
         screenSize=self.screen.get_size()
         if(self.frameChanged or (self.lastSize!=screenSize)):
             self.lastSize=screenSize
-            #put render menu code here
             pygame.transform.smoothscale(self.frameBuffer,screenSize,self.screen)
             pygame.display.flip()
             self.frameChanged=False
@@ -139,10 +153,13 @@ class Renderer:
  
 
     def render(self) -> None:
-        self.frameChanged=True
+        
         for layer in self.layers:
-            #put camera code here
+            layer.update(0,(self.camera.getPos()))
             layer.draw(self.frameBuffer)
+
+        self.frameChanged=True
+        #put render menu code here
 
     def getCurrentCamera(self):
         return self.camera
@@ -152,7 +169,10 @@ class Renderer:
         self.camera=camera
 
     def moveCamera(self,x,y):
-        self.camera
+        self.camera.move(x,y)
+
+    def setCameraPos(self,x,y):
+        self.camera.setPos(x,y)
 
 
     def start(self) -> None:
