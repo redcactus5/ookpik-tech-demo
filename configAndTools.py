@@ -71,14 +71,17 @@ class BasicSprite(pygame.sprite.Sprite):
         #init image pos
         self.rect.x=self.x
         self.rect.y=self.y
+        #init camera pos cache
+        self.cameraX=0
+        self.cameraY=0
 
     def hide(self):
         if(self.visible):
             self.visible=False
             self.image=pygame.surface.Surface((self.rect.width,self.rect.height))
             self.rect=self.image.get_rect()
-            self.rect.x=self.x
-            self.rect.y=self.y
+            self.rect.x=self.x-self.cameraX
+            self.rect.y=self.y-self.cameraY
             
 
     def show(self):
@@ -86,28 +89,38 @@ class BasicSprite(pygame.sprite.Sprite):
             self.visible=True
             self.image=self.currentTexture
             self.rect=self.image.get_rect()
-            self.rect.x=self.x
-            self.rect.y=self.y
+            self.rect.x=self.x-self.cameraX
+            self.rect.y=self.y-self.cameraY
 
     def changeTexture(self, newTexture:pygame.surface.Surface):
         self.currentTexture=newTexture
         self.image=newTexture
         self.rect=self.currentTexture.get_rect()
-        self.rect.x=self.x
-        self.rect.y=self.y
+        self.rect.x=self.x-self.cameraX
+        self.rect.y=self.y-self.cameraY
 
     def setPos(self,x,y):
         self.x=x
         self.y=y
-        self.rect.x=self.x
-        self.rect.y=self.y
+        self.rect.x=self.x-self.cameraX
+        self.rect.y=self.y-self.cameraY
 
 
     def move(self,x,y):
         self.x=(self.x+x)
         self.y=(self.y+y)
-        self.rect.x=self.x
-        self.rect.y=self.y
+        self.rect.x=self.x-self.cameraX
+        self.rect.y=self.y-self.cameraY
+
+    def update(self,argumentTuple) -> None:
+        if(argumentTuple[0]==0):#adjust camera
+            self.cameraX=argumentTuple[1][0]
+            self.cameraY=argumentTuple[1][1]
+            self.rect.x=self.x-self.cameraX
+            self.rect.y=self.y-self.cameraY
+
+
+
 
 
 
@@ -151,7 +164,8 @@ class Renderer:
 
     def render(self) -> None:
         #hyperoptimized render code
-        displayList=[(sprite.image, (sprite.x - self.camera.viewport.x, sprite.y - self.camera.viewport.y)) for layer in self.layers for sprite in layer.sprites() if(sprite.rect.colliderect(self.camera.viewport))]
+        cameraRect=self.camera.getRect()#get rekt son!
+        displayList=[(sprite.image, (sprite.rect.x, sprite.rect.y)) for layer in self.layers for sprite in layer.sprites() if(sprite.rect.colliderect(cameraRect))]
         self.frameBuffer.blits(displayList)
         self.frameChanged=True
         #put render menu code here
@@ -159,25 +173,52 @@ class Renderer:
     def getCurrentCamera(self):
         return self.camera
     
+    def _updateGlobalCameraState(self):
+        for layer in self.layers:
+            layer.update((0,(self.camera.getPos())))
+
 
     def setCurrentCamera(self,camera:Camera):
         self.camera=camera
+        self._updateGlobalCameraState()
 
     def moveCamera(self,x,y):
         self.camera.move(x,y)
+        self._updateGlobalCameraState()
 
     def setCameraPos(self,x,y):
         self.camera.setPos(x,y)
+        self._updateGlobalCameraState()
 
+    
+    def addSprite(self,sprite:BasicSprite,layer):
+        self.layers[layer].add(sprite)
+        sprite.update((0,(self.camera.getPos())))
+
+    def addSprites(self,sprites:list[BasicSprite],layer):
+        self.layers[layer].add(sprites)
+        self.layers[layer].update((0,(self.camera.getPos())))
 
     def start(self) -> None:
         self.screen=pygame.display.set_mode(size=(self.displayWidth, self.displayHeight),vsync=1,flags=pygame.SCALED|pygame.RESIZABLE)
         self.frameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
 
-    def deleteSprite(self,sprite:BasicSprite):
-        for layer in self.layers:
-            if(layer.has(sprite)):
-                layer.remove(sprite)
+    def deleteSprite(self,sprite:BasicSprite,layer:int):
+        if(self.layers[layer].has(sprite)):
+            self.layers[layer].remove(sprite)
+    
+    def deleteSprites(self,spriteList:list[BasicSprite],layer:int):
+        for sprite in spriteList:
+            if(self.layers[layer].has(sprite)):
+                self.layers[layer].remove(sprite)
+
+    def deleteSpriteFromAllLayers(self,sprite:BasicSprite):
+        for layer in range(len(self.layers)):
+            self.deleteSprite(sprite,layer)
+ 
+    def deleteSpritesFromAllLayers(self,spriteList:list[BasicSprite],layer:int):
+        for layer in range(len(self.layers)):
+            self.deleteSprites(spriteList,layer)
 
     def clearAllLayers(self):
         for layer in self.layers:
