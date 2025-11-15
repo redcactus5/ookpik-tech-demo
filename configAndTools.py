@@ -174,6 +174,20 @@ class Renderer:
         self.screen=pygame.display.set_mode(size=(self.displayWidth, self.displayHeight),vsync=1,flags=pygame.SCALED|pygame.RESIZABLE)
         self.frameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
 
+    def deleteSprite(self,sprite:BasicSprite):
+        for layer in self.layers:
+            if(layer.has(sprite)):
+                layer.remove(sprite)
+
+    def clearAllLayers(self):
+        for layer in self.layers:
+            layer.empty()
+        self.render()
+
+    def clearLayer(self,index:int):
+        self.layers[index].empty()
+        self.render()
+
         
 
 
