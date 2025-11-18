@@ -119,6 +119,13 @@ class BasicSprite(pygame.sprite.Sprite):
             self.rect.x=self.x-self.cameraX
             self.rect.y=self.y-self.cameraY
 
+    
+        elif(argumentTuple[0]==1):#replace texture
+            self.changeTexture(argumentTuple[1][0])
+
+
+
+
 
 
 
@@ -149,6 +156,8 @@ class Renderer:
         self.camera:Camera=Camera(0,0,self.displayWidth,self.displayHeight)
 
         #placeholder for menu stuff
+        #ui container class
+        #ui layer surface.
         
   
 
@@ -200,6 +209,7 @@ class Renderer:
         self.layers[layer].update((0,(self.camera.getPos())))
 
     def start(self) -> None:
+        #init the display and framebuffer
         self.screen=pygame.display.set_mode(size=(self.displayWidth, self.displayHeight),vsync=1,flags=pygame.SCALED|pygame.RESIZABLE)
         self.frameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
 
@@ -216,7 +226,7 @@ class Renderer:
         for layer in range(len(self.layers)):
             self.deleteSprite(sprite,layer)
  
-    def deleteSpritesFromAllLayers(self,spriteList:list[BasicSprite],layer:int):
+    def deleteSpritesFromAllLayers(self,spriteList:list[BasicSprite]):
         for layer in range(len(self.layers)):
             self.deleteSprites(spriteList,layer)
 
