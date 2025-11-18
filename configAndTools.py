@@ -123,6 +123,13 @@ class BasicSprite(pygame.sprite.Sprite):
         elif(argumentTuple[0]==1):#replace texture
             self.changeTexture(argumentTuple[1][0])
 
+        
+        elif(argumentTuple[0]==2):#move sprite
+
+
+        elif(argumentTuple[0]==3):
+
+
 
 
 
