@@ -34,25 +34,6 @@ class GameLogic:
 
 
 
-class Camera:
-    def __init__(self,x,y,width,height) -> None:
-        self.viewport=pygame.rect.Rect(x,y,width,height)
-
-    def getPos(self):
-        return (self.viewport.x, self.viewport.y)
-    
-    def setPos(self,x,y):
-        self.viewport.x=x
-        self.viewport.y=y
-    
-    def move(self,x,y):
-        self.viewport.x+=x
-        self.viewport.y+=y
-
-    def getRect(self):#lol
-        return self.viewport
-
-
     
 
 
@@ -115,6 +96,25 @@ class BasicSprite(pygame.sprite.Sprite):
 
 
 
+
+#TODO: move sprite rendering code in here, and give it its own surface to render to
+class Camera:
+    def __init__(self,x,y,width,height) -> None:
+        self.viewportSize=pygame.rect.Rect(x,y,width,height)
+
+    def getPos(self):
+        return (self.viewportSize.x, self.viewportSize.y)
+    
+    def setPos(self,x,y):
+        self.viewportSize.x=x
+        self.viewportSize.y=y
+    
+    def move(self,x,y):
+        self.viewportSize.x+=x
+        self.viewportSize.y+=y
+
+    def getRect(self):#lol
+        return self.viewportSize
 
 
 
