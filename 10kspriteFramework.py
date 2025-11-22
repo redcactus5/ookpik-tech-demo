@@ -122,7 +122,6 @@ class Camera:
 
 
 
-#TODO:implement a thread safe system to coordinate display flip triggers instead of the current boolean system
 
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int) -> None:
@@ -132,9 +131,9 @@ class Renderer:
         self.clearColor=clearColor
         #our three main surfaces, dont mind them, they are just here for the backend
         self.screen:pygame.Surface = pygame.Surface((0,0))
-        self.frameBuffer0:pygame.Surface = pygame.Surface((0,0))
-        self.frameBuffer1:pygame.Surface = pygame.Surface((0,0))
-        self.frameBuffer2:pygame.Surface = pygame.Surface((0,0))
+        self.displayFrameBuffer:pygame.Surface = pygame.Surface((0,0))
+        self.swapFrameBuffer:pygame.Surface = pygame.Surface((0,0))
+        self.renderFrameBuffer:pygame.Surface = pygame.Surface((0,0))
 
         #our events and locks to synchronize rendering
         self.newFrame:bool=True
@@ -163,17 +162,17 @@ class Renderer:
     def frameTick(self) -> None:
         screenSize=self.screen.get_size()
         if(self.newFrame):
-            temp=self.frameBuffer0
+            temp=self.displayFrameBuffer
             with self.swapLock:
-                self.frameBuffer0=self.frameBuffer1
-                self.frameBuffer1=temp
+                self.displayFrameBuffer=self.swapFrameBuffer
+                self.swapFrameBuffer=temp
                 self.newFrame=False
             self.shouldDraw=True
         elif((self.lastSize!=screenSize)):
             self.shouldDraw=True
         if(self.shouldDraw):
             self.lastSize=screenSize
-            pygame.transform.smoothscale(self.frameBuffer0,screenSize,self.screen)
+            pygame.transform.smoothscale(self.displayFrameBuffer,screenSize,self.screen)
             pygame.display.flip()
             self.shouldDraw=False
 
@@ -199,11 +198,11 @@ class Renderer:
         #use a cython version of the above to increase speed
         displayList:list[tuple[pygame.surface.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
         
-        self.frameBuffer2.blits(displayList)
-        temp=self.frameBuffer2
+        self.renderFrameBuffer.blits(displayList)
+        temp=self.renderFrameBuffer
         with self.swapLock:
-            self.frameBuffer2=self.frameBuffer1
-            self.frameBuffer1=temp
+            self.renderFrameBuffer=self.swapFrameBuffer
+            self.swapFrameBuffer=temp
             self.newFrame=True
         #put render menu code here
 
@@ -246,9 +245,9 @@ class Renderer:
     def start(self) -> None:
         #init the display and framebuffer
         self.screen=pygame.display.set_mode(size=(self.displayWidth, self.displayHeight),vsync=1,flags=pygame.SCALED|pygame.RESIZABLE)
-        self.frameBuffer0=pygame.Surface((self.displayWidth,self.displayHeight))
-        self.frameBuffer1=pygame.Surface((self.displayWidth,self.displayHeight))
-        self.frameBuffer2=pygame.Surface((self.displayWidth,self.displayHeight))
+        self.displayFrameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
+        self.swapFrameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
+        self.renderFrameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
 
     def deleteSprite(self,sprite:BasicSprite,layer:int):
         if(self.layers[layer].has(sprite)):
