@@ -3,7 +3,7 @@
 import threading
 import pygame
 import pygame_gui
-
+from fastRenderer.generateDisplayList import fastDisplayListGeneratorLoop
 
 #need to rewrite to use pygame
 
@@ -165,6 +165,7 @@ class Renderer:
 
     def render(self) -> None:
         #hyperoptimized render code
+        '''
         cameraRect=self.camera.getRect()#get rekt son!
         cameraLeft=cameraRect.left
         cameraRight=cameraRect.right
@@ -176,6 +177,10 @@ class Renderer:
             if(((sprite.rect.right>=cameraLeft) and (sprite.rect.left<=cameraRight)) and 
             ((sprite.rect.top<=cameraBottom) and (sprite.rect.bottom>=cameraTop)))
             ]
+        '''
+        #use a cython version of the above to increase speed
+        displayList:list[tuple[pygame.surface.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.camera.getRect())
+        
         self.frameBuffer.blits(displayList)
         self.frameChanged=True
         #put render menu code here

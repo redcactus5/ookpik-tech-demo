@@ -9,6 +9,6 @@ sys.argv += ["build_ext", "--inplace"]
 setup(
     ext_modules=cythonize(
         ["generateDisplayList.pyx"],  # your .pyx files
-        compiler_directives={'language_level': "3"}
+        compiler_directives={'language_level': "3"},
     ),
 )

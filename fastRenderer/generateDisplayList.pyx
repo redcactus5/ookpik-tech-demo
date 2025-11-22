@@ -1,9 +1,7 @@
 from libc.stdint cimport int32_t
 
-from configAndTools import BasicSprite
-from pygame import rect
 
-def fastDisplayListGeneratorLoop(list[set[BasicSprite]] internalLayersReference, rect.Rect cameraRectReference):
+def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRectReference):
     #cache the camera positions
     cdef int cameraLeft=cameraRectReference.left
     cdef int cameraRight=cameraRectReference.right
@@ -13,7 +11,7 @@ def fastDisplayListGeneratorLoop(list[set[BasicSprite]] internalLayersReference,
     #create some variables for objects
     cdef list displayList=[]
     cdef set layer
-    cdef BasicSprite sprite
+    cdef object sprite
 
     #variables for the four corners and coords
     cdef int spriteLeft
@@ -28,7 +26,7 @@ def fastDisplayListGeneratorLoop(list[set[BasicSprite]] internalLayersReference,
         for sprite in layer:
             #load the sprites
             spriteLeft=sprite.rect.left
-            spriteRight=sprite.rect.bottom
+            spriteRight=sprite.rect.right
             spriteTop=sprite.rect.top
             spriteBottom=sprite.rect.bottom
             spriteX=sprite.rect.x
