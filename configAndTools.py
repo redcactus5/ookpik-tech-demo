@@ -97,33 +97,28 @@ class BasicSprite(pygame.sprite.Sprite):
 
 
 
-#TODO: move sprite rendering code in here, and give it its own surface to render to
+
 class Camera:
     def __init__(self,x,y,width,height) -> None:
-        self.viewportSize=pygame.rect.Rect(x,y,width,height)
+        self.viewRect=pygame.rect.Rect(x,y,width,height)
 
     def getPos(self):
-        return (self.viewportSize.x, self.viewportSize.y)
+        return (self.viewRect.x, self.viewRect.y)
     
     def setPos(self,x,y):
-        self.viewportSize.x=x
-        self.viewportSize.y=y
+        self.viewRect.x=x
+        self.viewRect.y=y
     
     def move(self,x,y):
-        self.viewportSize.x+=x
-        self.viewportSize.y+=y
+        self.viewRect.x+=x
+        self.viewRect.y+=y
 
     def getRect(self):#lol
-        return self.viewportSize
+        return self.viewRect
 
 
 
-
-
-
-
-#TODO: update to add multiple parallel camera capability with one static display areas the cameras render to.
-
+#TODO: add double buffering
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int) -> None:
         #config stuff
@@ -145,7 +140,7 @@ class Renderer:
         
 
         #camera feature
-        self.camera:Camera=Camera(0,0,self.displayWidth,self.displayHeight)
+        self.currentCamera:Camera=Camera(0,0,self.displayWidth,self.displayHeight)
 
         #placeholder for menu stuff
         #ui container class
@@ -179,28 +174,28 @@ class Renderer:
             ]
         '''
         #use a cython version of the above to increase speed
-        displayList:list[tuple[pygame.surface.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.camera.getRect())
+        displayList:list[tuple[pygame.surface.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
         
         self.frameBuffer.blits(displayList)
         self.frameChanged=True
         #put render menu code here
 
     def getCurrentCamera(self):
-        return self.camera
+        return self.currentCamera
     
     
 
 
     def setCurrentCamera(self,camera:Camera):
-        self.camera=camera
+        self.currentCamera=camera
 
 
     def moveCamera(self,x,y):
-        self.camera.move(x,y)
+        self.currentCamera.move(x,y)
 
 
     def setCameraPos(self,x,y):
-        self.camera.setPos(x,y)
+        self.currentCamera.setPos(x,y)
 
 
     
@@ -216,7 +211,6 @@ class Renderer:
         #for all objects, so everything is seamless and doesn't break
         self.layers[layer].add(sprites)
         self.internalLayers[layer].update(sprites)
-        cameraPos=self.camera.getPos()
 
         
 
