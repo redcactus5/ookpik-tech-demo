@@ -71,17 +71,15 @@ class BasicSprite(pygame.sprite.Sprite):
         #init image pos
         self.rect.x=self.x
         self.rect.y=self.y
-        #init camera pos cache
-        self.cameraX=0
-        self.cameraY=0
+
 
     def hide(self):
         if(self.visible):
             self.visible=False
             self.image=pygame.surface.Surface((self.rect.width,self.rect.height))
             self.rect=self.image.get_rect()
-            self.rect.x=self.x-self.cameraX
-            self.rect.y=self.y-self.cameraY
+            self.rect.x=self.x
+            self.rect.y=self.y
             
 
     def show(self):
@@ -89,34 +87,28 @@ class BasicSprite(pygame.sprite.Sprite):
             self.visible=True
             self.image=self.currentTexture
             self.rect=self.image.get_rect()
-            self.rect.x=self.x-self.cameraX
-            self.rect.y=self.y-self.cameraY
+            self.rect.x=self.x
+            self.rect.y=self.y
 
     def changeTexture(self, newTexture:pygame.surface.Surface):
         self.currentTexture=newTexture
         self.image=newTexture
         self.rect=self.currentTexture.get_rect()
-        self.rect.x=self.x-self.cameraX
-        self.rect.y=self.y-self.cameraY
+        self.rect.x=self.x
+        self.rect.y=self.y
 
     def setPos(self,x,y):
         self.x=x
         self.y=y
-        self.rect.x=self.x-self.cameraX
-        self.rect.y=self.y-self.cameraY
+        self.rect.x=self.x
+        self.rect.y=self.y
 
 
     def move(self,x,y):
         self.x=(self.x+x)
         self.y=(self.y+y)
-        self.rect.x=self.x-self.cameraX
-        self.rect.y=self.y-self.cameraY
-
-    def updateCamera(self,cameraPosTuple:tuple[int,int]) -> None:
-        self.cameraX=cameraPosTuple[0]
-        self.cameraY=cameraPosTuple[1]
-        self.rect.x=self.x-self.cameraX
-        self.rect.y=self.y-self.cameraY
+        self.rect.x=self.x
+        self.rect.y=self.y
 
 
 
@@ -129,6 +121,8 @@ class BasicSprite(pygame.sprite.Sprite):
 
 
 
+
+#TODO: update to add multiple parallel camera capability with one static display areas the cameras render to.
 
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int) -> None:
@@ -172,7 +166,16 @@ class Renderer:
     def render(self) -> None:
         #hyperoptimized render code
         cameraRect=self.camera.getRect()#get rekt son!
-        displayList=[(sprite.image, (sprite.rect.x, sprite.rect.y)) for layer in self.internalLayers for sprite in layer if(sprite.rect.colliderect(cameraRect))]
+        cameraLeft=cameraRect.left
+        cameraRight=cameraRect.right
+        cameraBottom=cameraRect.bottom
+        cameraTop=cameraRect.top
+        displayList=[
+            (sprite.image, (sprite.rect.x-cameraRect.x, sprite.rect.y-cameraRect.y)) 
+            for layer in self.internalLayers for sprite in layer 
+            if(((sprite.rect.right>=cameraLeft) and (sprite.rect.left<=cameraRight)) and 
+            ((sprite.rect.top<=cameraBottom) and (sprite.rect.bottom>=cameraTop)))
+            ]
         self.frameBuffer.blits(displayList)
         self.frameChanged=True
         #put render menu code here
@@ -180,23 +183,20 @@ class Renderer:
     def getCurrentCamera(self):
         return self.camera
     
-    def _updateGlobalCameraState(self):
-        for layer in self.internalLayers:
-            for spriteObj in layer:
-                spriteObj.updateCamera((self.camera.getPos()))
+    
 
 
     def setCurrentCamera(self,camera:Camera):
         self.camera=camera
-        self._updateGlobalCameraState()
+
 
     def moveCamera(self,x,y):
         self.camera.move(x,y)
-        self._updateGlobalCameraState()
+
 
     def setCameraPos(self,x,y):
         self.camera.setPos(x,y)
-        self._updateGlobalCameraState()
+
 
     
     def addSprite(self,sprite:BasicSprite,layer:int):
@@ -204,7 +204,7 @@ class Renderer:
         #because of how sprite groups work and my obsession with speed in an inherently slow language
         self.layers[layer].add(sprite)
         self.internalLayers[layer].add(sprite)
-        sprite.updateCamera((self.camera.getPos()))
+        
 
     def addSprites(self,sprites:list[BasicSprite],layer:int):
         #update both the sprite group representation and the set representation, plus the camera,
@@ -212,8 +212,7 @@ class Renderer:
         self.layers[layer].add(sprites)
         self.internalLayers[layer].update(sprites)
         cameraPos=self.camera.getPos()
-        for sprite in sprites:
-            sprite.updateCamera(cameraPos)
+
         
 
     def start(self) -> None:
