@@ -112,22 +112,12 @@ class BasicSprite(pygame.sprite.Sprite):
         self.rect.x=self.x-self.cameraX
         self.rect.y=self.y-self.cameraY
 
-    def update(self,argumentTuple) -> None:
-        if(argumentTuple[0]==0):#adjust camera
-            self.cameraX=argumentTuple[1][0]
-            self.cameraY=argumentTuple[1][1]
-            self.rect.x=self.x-self.cameraX
-            self.rect.y=self.y-self.cameraY
+    def updateCamera(self,cameraPosTuple:tuple[int,int]) -> None:
+        self.cameraX=cameraPosTuple[0]
+        self.cameraY=cameraPosTuple[1]
+        self.rect.x=self.x-self.cameraX
+        self.rect.y=self.y-self.cameraY
 
-    
-        elif(argumentTuple[0]==1):#replace texture
-            self.changeTexture(argumentTuple[1][0])
-
-        
-        elif(argumentTuple[0]==2):#move sprite
-
-
-        elif(argumentTuple[0]==3):
 
 
 
@@ -156,7 +146,8 @@ class Renderer:
         #sprite layer stuff, because everything is a sprite
         self.layerCount:int=layers
         self.layers:list[pygame.sprite.Group]=[pygame.sprite.Group() for l in range(layers)]
-        
+        #speed optimization i didnt want but must have
+        self.internalLayers:list[set[BasicSprite]]=[set() for l in range(layers)]
         
 
         #camera feature
@@ -181,7 +172,7 @@ class Renderer:
     def render(self) -> None:
         #hyperoptimized render code
         cameraRect=self.camera.getRect()#get rekt son!
-        displayList=[(sprite.image, (sprite.rect.x, sprite.rect.y)) for layer in self.layers for sprite in layer.sprites() if(sprite.rect.colliderect(cameraRect))]
+        displayList=[(sprite.image, (sprite.rect.x, sprite.rect.y)) for layer in self.internalLayers for sprite in layer if(sprite.rect.colliderect(cameraRect))]
         self.frameBuffer.blits(displayList)
         self.frameChanged=True
         #put render menu code here
@@ -190,8 +181,9 @@ class Renderer:
         return self.camera
     
     def _updateGlobalCameraState(self):
-        for layer in self.layers:
-            layer.update((0,(self.camera.getPos())))
+        for layer in self.internalLayers:
+            for spriteObj in layer:
+                spriteObj.updateCamera((self.camera.getPos()))
 
 
     def setCurrentCamera(self,camera:Camera):
@@ -207,13 +199,22 @@ class Renderer:
         self._updateGlobalCameraState()
 
     
-    def addSprite(self,sprite:BasicSprite,layer):
+    def addSprite(self,sprite:BasicSprite,layer:int):
+        #update both the sprite group representation and the set representation, plus the camera, so everything is seamless and doesn't break
+        #because of how sprite groups work and my obsession with speed in an inherently slow language
         self.layers[layer].add(sprite)
-        sprite.update((0,(self.camera.getPos())))
+        self.internalLayers[layer].add(sprite)
+        sprite.updateCamera((self.camera.getPos()))
 
-    def addSprites(self,sprites:list[BasicSprite],layer):
+    def addSprites(self,sprites:list[BasicSprite],layer:int):
+        #update both the sprite group representation and the set representation, plus the camera,
+        #for all objects, so everything is seamless and doesn't break
         self.layers[layer].add(sprites)
-        self.layers[layer].update((0,(self.camera.getPos())))
+        self.internalLayers[layer].update(sprites)
+        cameraPos=self.camera.getPos()
+        for sprite in sprites:
+            sprite.updateCamera(cameraPos)
+        
 
     def start(self) -> None:
         #init the display and framebuffer
@@ -223,11 +224,13 @@ class Renderer:
     def deleteSprite(self,sprite:BasicSprite,layer:int):
         if(self.layers[layer].has(sprite)):
             self.layers[layer].remove(sprite)
+            self.internalLayers[layer].remove(sprite)
     
     def deleteSprites(self,spriteList:list[BasicSprite],layer:int):
         for sprite in spriteList:
             if(self.layers[layer].has(sprite)):
                 self.layers[layer].remove(sprite)
+                self.internalLayers[layer].remove(sprite)
 
     def deleteSpriteFromAllLayers(self,sprite:BasicSprite):
         for layer in range(len(self.layers)):
@@ -238,12 +241,14 @@ class Renderer:
             self.deleteSprites(spriteList,layer)
 
     def clearAllLayers(self):
-        for layer in self.layers:
+        for index,layer in enumerate(self.layers):
             layer.empty()
+            self.internalLayers[index]=set()
         self.render()
 
     def clearLayer(self,index:int):
         self.layers[index].empty()
+        self.internalLayers[index]=set()
         self.render()
 
         
