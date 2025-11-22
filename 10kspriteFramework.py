@@ -118,7 +118,7 @@ class Camera:
 
 
 
-#TODO: add double buffering
+
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int) -> None:
         #config stuff
