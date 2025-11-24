@@ -5,6 +5,10 @@ import pygame
 import pygame_gui
 from fastRenderer.generateDisplayList import fastDisplayListGeneratorLoop
 
+
+#TKS engine
+
+
 #need to rewrite to use pygame
 
 #arcitecture: render object with layers via sprite groups, core engine, menu objects via pygame gui, generator object for genration code, event handler object
@@ -73,7 +77,8 @@ class BasicSprite(pygame.sprite.Sprite):
 
     def changeTexture(self, newTexture:pygame.surface.Surface):
         self.currentTexture=newTexture
-        self.image=newTexture
+        if(self.visible):
+            self.image=newTexture
         self.rect=self.currentTexture.get_rect()
         self.rect.x=self.x
         self.rect.y=self.y
@@ -303,7 +308,7 @@ class Core:
         self.deltaTime:float=0
         
         
-        
+    
 
 
     def run(self):
