@@ -3,8 +3,8 @@
 import threading
 import pygame
 import pygame_gui
-from fastRenderer.generateDisplayList import fastDisplayListGeneratorLoop
-
+from fastFunctions.TKSFastFunctions import fastDisplayListGeneratorLoop
+import math
 
 #TKS engine
 
@@ -38,63 +38,66 @@ class GameLogic:
 
 
 
-    
-
+def getImageSize(image:pygame.Surface):
+    imageRect=image.get_rect()
+    return (imageRect.width,imageRect.height)
 
 
 class BasicSprite(pygame.sprite.Sprite):
-    def __init__(self,x,y,image:pygame.surface.Surface) -> None:
+    def __init__(self,x:int,y:int,width:int,height:int,image:pygame.Surface) -> None:
         super().__init__()
         #init texture
-        self.currentTexture:pygame.surface.Surface=image
-        self.image:pygame.surface.Surface=self.currentTexture
-        self.rect:pygame.rect.Rect=self.image.get_rect()
-        #init pos and visibility
+        self.image:pygame.Surface=image
+        #init rects
+        self.rect:pygame.Rect=pygame.Rect(x,y,width,height)
+        self.imageRect:pygame.Rect=self.image.get_rect()
+        #init visibility
         self.visible=True
-        self.x=x
-        self.y=y
         #init image pos
-        self.rect.x=self.x
-        self.rect.y=self.y
+        self.imageRect.x=self.rect.x
+        self.imageRect.y=self.rect.y
+        #init image offset
+        self.imageOffsetX=0
+        self.imageOffsetY=0
+        
 
 
     def hide(self):
-        if(self.visible):
-            self.visible=False
-            self.image=pygame.surface.Surface((self.rect.width,self.rect.height))
-            self.rect=self.image.get_rect()
-            self.rect.x=self.x
-            self.rect.y=self.y
-            
+        self.visible=False
+
+
 
     def show(self):
-        if(not self.visible):
-            self.visible=True
-            self.image=self.currentTexture
-            self.rect=self.image.get_rect()
-            self.rect.x=self.x
-            self.rect.y=self.y
+        self.visible=True
+ 
 
-    def changeTexture(self, newTexture:pygame.surface.Surface):
-        self.currentTexture=newTexture
-        if(self.visible):
-            self.image=newTexture
-        self.rect=self.currentTexture.get_rect()
-        self.rect.x=self.x
-        self.rect.y=self.y
+    def changeTexture(self, newTexture:pygame.Surface):
+        self.image=newTexture
+        self.imageRect=self.image.get_rect()
+        self.imageRect.x=self.rect.x+self.imageOffsetX
+        self.imageRect.y=self.rect.y+self.imageOffsetY
 
     def setPos(self,x,y):
-        self.x=x
-        self.y=y
-        self.rect.x=self.x
-        self.rect.y=self.y
+        self.rect.x=x
+        self.rect.y=y
+        self.imageRect.x=self.rect.x+self.imageOffsetX
+        self.imageRect.y=self.rect.y+self.imageOffsetY
 
 
     def move(self,x,y):
-        self.x=(self.x+x)
-        self.y=(self.y+y)
-        self.rect.x=self.x
-        self.rect.y=self.y
+       self.rect.x+=x
+       self.rect.y+=y
+       self.imageRect.x=self.rect.x+self.imageOffsetX
+       self.imageRect.y=self.rect.y+self.imageOffsetY
+
+    def setTextureOffset(self,x,y):
+        self.imageOffsetX=x
+        self.imageOffsetY=y
+        self.imageRect.x=self.rect.x+self.imageOffsetX
+        self.imageRect.y=self.rect.y+self.imageOffsetY
+
+
+    
 
 
 
@@ -105,7 +108,7 @@ class BasicSprite(pygame.sprite.Sprite):
 
 class Camera:
     def __init__(self,x,y,width,height) -> None:
-        self.viewRect=pygame.rect.Rect(x,y,width,height)
+        self.viewRect=pygame.Rect(x,y,width,height)
 
     def getPos(self):
         return (self.viewRect.x, self.viewRect.y)
@@ -127,25 +130,33 @@ class Camera:
 
 
 
-
+#TODO: implement new scaling system based on windowed and full screen
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int) -> None:
         #config stuff
-        self.displayWidth=displayWidth
-        self.displayHeight=displayHeight
+        self.internalWidth=displayWidth
+        self.internalHeight=displayHeight
         self.clearColor=clearColor
+        self.displayAspectMode=0
+        self.framebufferAspectMode=0
         #our three main surfaces, dont mind them, they are just here for the backend
-        self.screen:pygame.Surface = pygame.Surface((0,0))
-        self.displayFrameBuffer:pygame.Surface = pygame.Surface((0,0))
-        self.swapFrameBuffer:pygame.Surface = pygame.Surface((0,0))
-        self.renderFrameBuffer:pygame.Surface = pygame.Surface((0,0))
+        self.screen:pygame.Surface=None
+        self.stagingFrameBuffer:pygame.Surface=None
+        self.displayFrameBuffer:pygame.Surface=None
+        self.swapFrameBuffer:pygame.Surface=None
+        self.renderFrameBuffer:pygame.Surface=None
+        #our numbers used for fancy scaling
+        self.scaledDisplayWidth=0
+        self.scaledDisplayHeight=0
+        self.scaledDisplayOffset=(0,0)
 
         #our events and locks to synchronize rendering
         self.newFrame:bool=True
         self.swapLock:threading.Lock=threading.Lock()
         #variables for controlling what gets rendered and when
         self.shouldDraw=True
-        self.lastSize=(0,0)
+        self.oldSize=(0,0)
+        
 
         #sprite layer stuff, because everything is a sprite
         self.layerCount:int=layers
@@ -155,7 +166,7 @@ class Renderer:
         
 
         #camera feature
-        self.currentCamera:Camera=Camera(0,0,self.displayWidth,self.displayHeight)
+        self.currentCamera:Camera=Camera(0,0,self.internalWidth,self.internalHeight)
 
         #TODO: menu integration
         #placeholder for menu stuff
@@ -175,9 +186,16 @@ class Renderer:
             self.shouldDraw=True
         elif((self.lastSize!=screenSize)):
             self.shouldDraw=True
+            scalingValue=min((self.lastSize[0]/self.internalWidth),(self.lastSize[1]/self.internalHeight))
+            self.scaledDisplayWidth=self.internalWidth*scalingValue
+            self.scaledDisplayHeight=self.internalHeight*scalingValue
+            self.scaledDisplayOffset=(((self.lastSize[0]-self.scaledDisplayWidth)//2),((self.lastSize[1]-self.scaledDisplayHeight)//2))
+            
         if(self.shouldDraw):
             self.lastSize=screenSize
-            pygame.transform.smoothscale(self.displayFrameBuffer,screenSize,self.screen)
+            self.screen.fill((0,0,0))
+            pygame.transform.smoothscale(self.displayFrameBuffer,(self.scaledDisplayWidth,self.scaledDisplayHeight),self.stagingFrameBuffer)
+            self.screen.blit(self.stagingFrameBuffer,self.scaledDisplayOffset)
             pygame.display.flip()
             self.shouldDraw=False
 
@@ -201,8 +219,8 @@ class Renderer:
             ]
         '''
         #use a cython version of the above to increase speed
-        displayList:list[tuple[pygame.surface.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
-        
+        displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
+        self.renderFrameBuffer.fill(self.clearColor,special_flags=pygame.SRCALPHA)
         self.renderFrameBuffer.blits(displayList)
         temp=self.renderFrameBuffer
         with self.swapLock:
@@ -245,14 +263,24 @@ class Renderer:
         self.layers[layer].add(sprites)
         self.internalLayers[layer].update(sprites)
 
+
+
+
+
+
+        
         
 
     def start(self) -> None:
+        #make sure the display is inactive
+        if(pygame.display.get_active()):
+            pygame.display.quit()
         #init the display and framebuffer
-        self.screen=pygame.display.set_mode(size=(self.displayWidth, self.displayHeight),vsync=1,flags=pygame.SCALED|pygame.RESIZABLE)
-        self.displayFrameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
-        self.swapFrameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
-        self.renderFrameBuffer=pygame.Surface((self.displayWidth,self.displayHeight))
+        self.screen=pygame.display.set_mode(size=(self.internalWidth, self.internalHeight),vsync=1, flags=pygame.DOUBLEBUF|pygame.RESIZABLE|pygame.SCALED)
+        self.stagingFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.swapFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
 
     def deleteSprite(self,sprite:BasicSprite,layer:int):
         if(self.layers[layer].has(sprite)):

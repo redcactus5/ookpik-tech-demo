@@ -1,6 +1,6 @@
-# render_loop.pyi
+
 from typing import List, Tuple
-from configAndTools import BasicSprite
+from tenThousandSpriteFramwork import BasicSprite
 from pygame import Rect
 from pygame import surface
 

@@ -12,6 +12,7 @@ def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRe
     cdef list displayList=[]
     cdef set layer
     cdef object sprite
+    cdef object imageRect
 
     #variables for the four corners and coords
     cdef int spriteLeft
@@ -24,17 +25,20 @@ def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRe
     #the main nested loops
     for layer in internalLayersReference:
         for sprite in layer:
-            #load the sprites
-            spriteLeft=sprite.rect.left
-            spriteRight=sprite.rect.right
-            spriteTop=sprite.rect.top
-            spriteBottom=sprite.rect.bottom
-            spriteX=sprite.rect.x
-            spriteY=sprite.rect.y
-
-            if ((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
-                (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
-                displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
+            #early visibility check optimisation
+            if(<bool>sprite.visible):
+                #load the sprites
+                imageRect=sprite.imageRect
+                spriteLeft=imageRect.left
+                spriteRight=imageRect.right
+                spriteTop=imageRect.top
+                spriteBottom=imageRect.bottom
+                spriteX=imageRect.x
+                spriteY=imageRect.y
+                #viewport culling check
+                if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
+                    (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
+                    displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
     return displayList
 
 
