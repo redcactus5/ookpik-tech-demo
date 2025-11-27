@@ -146,8 +146,7 @@ class Renderer:
         self.swapFrameBuffer:pygame.Surface=None
         self.renderFrameBuffer:pygame.Surface=None
         #our numbers used for fancy scaling
-        self.scaledDisplayWidth=0
-        self.scaledDisplayHeight=0
+        self.scaledDisplaySize=(0,0)
         self.scaledDisplayOffset=(0,0)
 
         #our events and locks to synchronize rendering
@@ -187,14 +186,12 @@ class Renderer:
         elif((self.lastSize!=screenSize)):
             self.shouldDraw=True
             scalingValue=min((self.lastSize[0]/self.internalWidth),(self.lastSize[1]/self.internalHeight))
-            self.scaledDisplayWidth=self.internalWidth*scalingValue
-            self.scaledDisplayHeight=self.internalHeight*scalingValue
-            self.scaledDisplayOffset=(((self.lastSize[0]-self.scaledDisplayWidth)//2),((self.lastSize[1]-self.scaledDisplayHeight)//2))
-            
+            self.scaledDisplaySize=(int(self.internalWidth*scalingValue),int(self.internalHeight*scalingValue))
+            self.scaledDisplayOffset=(((self.lastSize[0]-self.scaledDisplaySize[0])//2),((self.lastSize[1]-self.scaledDisplaySize[1])//2))
         if(self.shouldDraw):
             self.lastSize=screenSize
             self.screen.fill((0,0,0))
-            pygame.transform.smoothscale(self.displayFrameBuffer,(self.scaledDisplayWidth,self.scaledDisplayHeight),self.stagingFrameBuffer)
+            pygame.transform.smoothscale(self.displayFrameBuffer,self.scaledDisplaySize,self.stagingFrameBuffer)
             self.screen.blit(self.stagingFrameBuffer,self.scaledDisplayOffset)
             pygame.display.flip()
             self.shouldDraw=False
