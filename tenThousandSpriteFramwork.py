@@ -5,7 +5,7 @@ import pygame
 import pygame_gui
 from fastFunctions.TKSFastFunctions import fastDisplayListGeneratorLoop
 import math
-
+import TKSWorkerThreads
 #TKS engine
 
 
@@ -130,33 +130,30 @@ class Camera:
 
 
 
-#TODO: implement new scaling system based on windowed and full screen
 class Renderer:
-    def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int) -> None:
+    def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int, targetFrameRate:int) -> None:
         #config stuff
         self.internalWidth=displayWidth
         self.internalHeight=displayHeight
         self.clearColor=clearColor
-        self.displayAspectMode=0
-        self.framebufferAspectMode=0
+        self.targetFrameRate:int=targetFrameRate
         #our three main surfaces, dont mind them, they are just here for the backend
         self.screen:pygame.Surface=None
-        self.stagingFrameBuffer:pygame.Surface=None
+        self.letterboxViewPort:pygame.Surface=None
         self.displayFrameBuffer:pygame.Surface=None
-        self.swapFrameBuffer:pygame.Surface=None
         self.renderFrameBuffer:pygame.Surface=None
         #our numbers used for fancy scaling
-        self.scaledDisplaySize=(0,0)
-        self.scaledDisplayOffset=(0,0)
-
-        #our events and locks to synchronize rendering
-        self.newFrame:bool=True
-        self.swapLock:threading.Lock=threading.Lock()
+        self.scaledDisplayRect=pygame.Rect(0,0,self.internalWidth,self.internalHeight)
+        #swapper and its events
+        self.frameBufferSwapper:TKSWorkerThreads.frameBufferSwapper=None
+        self.bufferSwapTrigger:threading.Event=threading.Event()
+        self.newFrameTrigger:threading.Event=threading.Event()
+        self.swapFinishedSignal:threading.Event=threading.Event()
+        self.goAroundSignal:threading.Event=threading.Event()
         #variables for controlling what gets rendered and when
         self.shouldDraw=True
         self.oldSize=(0,0)
-        
-
+        self.framebufferAccessLock:threading.Lock=threading.Lock()
         #sprite layer stuff, because everything is a sprite
         self.layerCount:int=layers
         self.layers:list[pygame.sprite.Group]=[pygame.sprite.Group() for l in range(layers)]
@@ -172,31 +169,52 @@ class Renderer:
         #ui container class
         #ui layer surface.
         
-  
+    def _swapFrameBuffers(self)->None:
+        temp=self.renderFrameBuffer
+        self.renderFrameBuffer=self.displayFrameBuffer
+        self.renderFrameBuffer=temp
+    
 
     def frameTick(self) -> None:
+        #get the current window size
         screenSize=self.screen.get_size()
-        if(self.newFrame):
-            temp=self.displayFrameBuffer
-            with self.swapLock:
-                self.displayFrameBuffer=self.swapFrameBuffer
-                self.swapFrameBuffer=temp
-                self.newFrame=False
+
+        #if the screensize has changed
+        if((self.lastSize!=screenSize)):
+            #clear the new frame trigger if it has been set
+            self.newFrameTrigger.clear()
+            if((screenSize[0]!=0)and(screenSize[1]!=0)):
+                #calculate the new letterbox
+                scalingValue=min((self.lastSize[0]/self.internalWidth),(self.lastSize[1]/self.internalHeight))
+                #update the letterbox viewport rect
+                self.scaledDisplayRect.width=int(self.internalWidth*scalingValue)
+                self.scaledDisplayRect.height=int(self.internalHeight*scalingValue)
+                self.scaledDisplayRect.x=((self.lastSize[0]-self.scaledDisplayRect.width)//2)
+                self.scaledDisplayRect.y=((self.lastSize[1]-self.scaledDisplayRect.height)//2)
+                #get a new renderer subsurface for that viewport, leaving the rest as letterbox
+                self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+                #set the should draw flag so we update the screen with the new size
+                self.shouldDraw=True
+
+        #otherwise check if there are any new frames to draw and set the flag if so
+        elif(self.newFrameTrigger.is_set()):
+            #clear the trigger
+            self.newFrameTrigger.clear()
             self.shouldDraw=True
-        elif((self.lastSize!=screenSize)):
-            self.shouldDraw=True
-            scalingValue=min((self.lastSize[0]/self.internalWidth),(self.lastSize[1]/self.internalHeight))
-            self.scaledDisplaySize=(int(self.internalWidth*scalingValue),int(self.internalHeight*scalingValue))
-            self.scaledDisplayOffset=(((self.lastSize[0]-self.scaledDisplaySize[0])//2),((self.lastSize[1]-self.scaledDisplaySize[1])//2))
+        #if there is a reason to draw a new frame
         if(self.shouldDraw):
+            #cache the current screensize for size checking
             self.lastSize=screenSize
+            #clear the screen
             self.screen.fill((0,0,0))
-            pygame.transform.smoothscale(self.displayFrameBuffer,self.scaledDisplaySize,self.stagingFrameBuffer)
-            self.screen.blit(self.stagingFrameBuffer,self.scaledDisplayOffset)
+            #acquire the framebuffer access lock
+            with self.framebufferAccessLock:
+                pygame.transform.smoothscale(self.displayFrameBuffer,(self.scaledDisplayRect.width,self.scaledDisplayRect.height),self.letterboxViewPort)
+            #flip the display
             pygame.display.flip()
+            #reset the should draw flag
             self.shouldDraw=False
 
-            
 
  
 
@@ -219,12 +237,10 @@ class Renderer:
         displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
         self.renderFrameBuffer.fill(self.clearColor,special_flags=pygame.SRCALPHA)
         self.renderFrameBuffer.blits(displayList)
-        temp=self.renderFrameBuffer
-        with self.swapLock:
-            self.renderFrameBuffer=self.swapFrameBuffer
-            self.swapFrameBuffer=temp
-            self.newFrame=True
+        
         #put render menu code here
+
+        #put new render system logic here
 
 
 
@@ -278,6 +294,21 @@ class Renderer:
         self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.swapFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        #init the control events
+        self.bufferSwapTrigger.clear()
+        self.newFrameTrigger.clear()
+        self.swapFinishedSignal.clear()
+        self.goAroundSignal.clear()
+        if(self.frameBufferSwapper!=None):
+            self.frameBufferSwapper.shutdown()
+        #init the swap thread
+        self.frameBufferSwapper=TKSWorkerThreads.frameBufferSwapper(self,self.framebufferAccessLock,self.bufferSwapTrigger,self.swapFinishedSignal,self.goAroundSignal,self.targetFrameRate,self.newFrameTrigger)
+        #release the lock if it is held
+        if(self.framebufferAccessLock.locked()):
+            self.framebufferAccessLock.release()
+        
+
+
 
     def deleteSprite(self,sprite:BasicSprite,layer:int):
         if(self.layers[layer].has(sprite)):
