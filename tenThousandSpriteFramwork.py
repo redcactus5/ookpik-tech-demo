@@ -150,6 +150,7 @@ class Renderer:
         self.newFrameTrigger:threading.Event=threading.Event()
         self.swapFinishedSignal:threading.Event=threading.Event()
         self.goAroundSignal:threading.Event=threading.Event()
+        self.notBusyDrawing:threading.Event=threading.Event()
         #variables for controlling what gets rendered and when
         self.shouldDraw=True
         self.oldSize=(0,0)
@@ -207,9 +208,12 @@ class Renderer:
             self.lastSize=screenSize
             #clear the screen
             self.screen.fill((0,0,0))
+            #set the wait state flag so the go around system has a shred of a chance of working
+            self.notBusyDrawing.clear()
             #acquire the framebuffer access lock
             with self.framebufferAccessLock:
                 pygame.transform.smoothscale(self.displayFrameBuffer,(self.scaledDisplayRect.width,self.scaledDisplayRect.height),self.letterboxViewPort)
+            self.notBusyDrawing.set()
             #flip the display
             pygame.display.flip()
             #reset the should draw flag
@@ -233,14 +237,18 @@ class Renderer:
             ((sprite.rect.top<=cameraBottom) and (sprite.rect.bottom>=cameraTop)))
             ]
         '''
-        #use a cython version of the above to increase speed
-        displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
-        self.renderFrameBuffer.fill(self.clearColor,special_flags=pygame.SRCALPHA)
-        self.renderFrameBuffer.blits(displayList)
-        
-        #put render menu code here
+        if(not self.bufferSwapTrigger.is_set()):
+            #use a cython version of the above to increase speed
+            displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
+            self.renderFrameBuffer.fill(self.clearColor,special_flags=pygame.SRCALPHA)
+            self.renderFrameBuffer.blits(displayList)
+            
 
-        #put new render system logic here
+            #put render menu code here
+
+            self.bufferSwapTrigger.set()
+
+
 
 
 
@@ -294,15 +302,16 @@ class Renderer:
         self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.swapFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        #clear any old threads
+        if(self.frameBufferSwapper!=None):
+            self.frameBufferSwapper.shutdown()
         #init the control events
         self.bufferSwapTrigger.clear()
         self.newFrameTrigger.clear()
-        self.swapFinishedSignal.clear()
-        self.goAroundSignal.clear()
-        if(self.frameBufferSwapper!=None):
-            self.frameBufferSwapper.shutdown()
+        #inverted because of how wait works
+        self.notBusyDrawing.set()
         #init the swap thread
-        self.frameBufferSwapper=TKSWorkerThreads.frameBufferSwapper(self,self.framebufferAccessLock,self.bufferSwapTrigger,self.swapFinishedSignal,self.goAroundSignal,self.targetFrameRate,self.newFrameTrigger)
+        self.frameBufferSwapper=TKSWorkerThreads.frameBufferSwapper(self,self.framebufferAccessLock,self.bufferSwapTrigger,self.targetFrameRate,self.newFrameTrigger,self.notBusyDrawing)
         #release the lock if it is held
         if(self.framebufferAccessLock.locked()):
             self.framebufferAccessLock.release()
