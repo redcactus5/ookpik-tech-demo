@@ -23,6 +23,10 @@ class frameBufferSwapper(threading.Thread):
             if(self.shutdownSignal):
                 #break the circular reference
                 self.renderer=None
+                self.swapTrigger=None
+                self.newFrameSignal=None
+                self.mainThreadNotBusy=None
+                self.swapLock=None
                 #stop the loop
                 self.running=False
                 #bail

@@ -144,6 +144,7 @@ class Renderer:
         self.renderFrameBuffer:pygame.Surface=None
         #our numbers used for fancy scaling
         self.scaledDisplayRect=pygame.Rect(0,0,self.internalWidth,self.internalHeight)
+        self.scaledSize:tuple[int,int]=(0,0)
         #swapper and its events
         self.frameBufferSwapper:TKSWorkerThreads.frameBufferSwapper=None
         self.bufferSwapTrigger:threading.Event=threading.Event()
@@ -173,7 +174,7 @@ class Renderer:
     def _swapFrameBuffers(self)->None:
         temp=self.renderFrameBuffer
         self.renderFrameBuffer=self.displayFrameBuffer
-        self.renderFrameBuffer=temp
+        self.displayFrameBuffer=temp
     
 
     def frameTick(self) -> None:
@@ -188,10 +189,11 @@ class Renderer:
                 #calculate the new letterbox
                 scalingValue=min((self.lastSize[0]/self.internalWidth),(self.lastSize[1]/self.internalHeight))
                 #update the letterbox viewport rect
-                self.scaledDisplayRect.width=int(self.internalWidth*scalingValue)
-                self.scaledDisplayRect.height=int(self.internalHeight*scalingValue)
-                self.scaledDisplayRect.x=((self.lastSize[0]-self.scaledDisplayRect.width)//2)
-                self.scaledDisplayRect.y=((self.lastSize[1]-self.scaledDisplayRect.height)//2)
+                self.scaledSize=(int(self.internalWidth*scalingValue),int(self.internalHeight*scalingValue))
+                self.scaledDisplayRect.width=self.scaledSize[0]
+                self.scaledDisplayRect.height=self.scaledSize[1]
+                self.scaledDisplayRect.x=((self.lastSize[0]-self.scaledSize[0])//2)
+                self.scaledDisplayRect.y=((self.lastSize[1]-self.scaledSize[1])//2)
                 #get a new renderer subsurface for that viewport, leaving the rest as letterbox
                 self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
                 #set the should draw flag so we update the screen with the new size
@@ -212,7 +214,7 @@ class Renderer:
             self.notBusyDrawing.clear()
             #acquire the framebuffer access lock
             with self.framebufferAccessLock:
-                pygame.transform.smoothscale(self.displayFrameBuffer,(self.scaledDisplayRect.width,self.scaledDisplayRect.height),self.letterboxViewPort)
+                pygame.transform.smoothscale(self.displayFrameBuffer,self.scaledSize,self.letterboxViewPort)
             self.notBusyDrawing.set()
             #flip the display
             pygame.display.flip()
