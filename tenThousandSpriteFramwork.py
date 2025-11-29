@@ -148,7 +148,6 @@ class Renderer:
         self.integerBufferSize:tuple[int,int]=(self.internalWidth,self.internalHeight)
         self.scaledSize:tuple[int,int]=(0,0)
         self.scaleStepSize=10
-        self.scaleStepSize=self.scaleStepSize//10
         self.shouldSmoothScale:bool=False
         #swapper and its events
         self.frameBufferSwapper:TKSWorkerThreads.frameBufferSwapper=None
@@ -184,7 +183,7 @@ class Renderer:
         #calculate the new integer scaling value, making sure it isnt below 1
         intScalingValue=max(1,min((screenSize[0]//self.internalWidth),(screenSize[1]//self.internalHeight)))
         #calculate the new float scale value, making sure it isn't below 1, and adjust it for 10% steps
-        floatScalingValue=round(max(1,min((screenSize[0]/self.internalWidth),(screenSize[1]/self.internalHeight))),self.scaleStepSize)*self.scaleStepSize
+        floatScalingValue=round(max(1,min((screenSize[0]/self.internalWidth),(screenSize[1]/self.internalHeight)))/self.scaleStepSize)*self.scaleStepSize
         #turn off smooth scaling if unnecessary
         if((floatScalingValue-intScalingValue)>self.scaleStepSize):
             self.shouldSmoothScale=True
