@@ -7,7 +7,7 @@ import time
 import random
 #might remove later
 
-import tenThousandSpriteFramwork
+import TKS
 
 
 

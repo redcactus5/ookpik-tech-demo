@@ -1,5 +1,8 @@
+'''
+the 10,000 sprites engine
+'''
 
-#start of full framework rewrite
+
 import threading
 import pygame
 import pygame_gui

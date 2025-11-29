@@ -1,4 +1,4 @@
-from tenThousandSpriteFramwork import Renderer
+from TKS import Renderer
 import threading
 
 
