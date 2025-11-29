@@ -149,6 +149,7 @@ class Renderer:
         self.scaledDisplayRect=pygame.Rect(0,0,self.internalWidth,self.internalHeight)
         self.integerBufferSize:tuple[int,int]=(self.internalWidth,self.internalHeight)
         self.scaledSize:tuple[int,int]=(0,0)
+        self.scaledDisplayOffset=(0,0)
         self.scaleStepSize=10
         self.shouldSmoothScale:bool=False
         #swapper and its events
@@ -196,8 +197,9 @@ class Renderer:
         self.scaledSize=(int(self.internalWidth*floatScalingValue),int(self.internalHeight*floatScalingValue))
         self.scaledDisplayRect.width=self.scaledSize[0]
         self.scaledDisplayRect.height=self.scaledSize[1]
-        self.scaledDisplayRect.x=((self.lastSize[0]-self.scaledSize[0])//2)
-        self.scaledDisplayRect.y=((self.lastSize[1]-self.scaledSize[1])//2)
+        self.scaledDisplayOffset=(((self.lastSize[0]-self.scaledSize[0])//2),((self.lastSize[1]-self.scaledSize[1])//2))
+        self.scaledDisplayRect.x=self.scaledDisplayOffset[0]
+        self.scaledDisplayRect.y=self.scaledDisplayOffset[1]
         #get a new renderer subsurface for that viewport, leaving the rest as letterbox
         self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
         #handle integer scaling
@@ -244,7 +246,7 @@ class Renderer:
                 pygame.transform.smoothscale(self.integerScaleBuffer,self.scaledSize,self.letterboxViewPort)
             else:
                 #blit to the screen
-                self.letterboxViewPort.blit(self.integerScaleBuffer,self.scaledDisplayRect)
+                self.letterboxViewPort.blit(self.integerScaleBuffer,self.scaledDisplayOffset)
             #flip the display
             pygame.display.flip()
             #reset the should draw flag
