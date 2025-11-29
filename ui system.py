@@ -7,13 +7,13 @@ import time
 import random
 #might remove later
 
-import configAndTools
+import tenThousandSpriteFramwork
 
 
 
 #config constants
-WINDOWPIXELWIDTH=1280
-WINDOWPIXELHEIGHT=720
+WINDOWPIXELWIDTH=800
+WINDOWPIXELHEIGHT=850
 TILESIZE=16
 TILEWIDTH=int(WINDOWPIXELWIDTH/TILESIZE)
 TILEHEIGHT=int(WINDOWPIXELHEIGHT/TILESIZE)

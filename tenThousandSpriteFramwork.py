@@ -140,17 +140,20 @@ class Renderer:
         #our three main surfaces, dont mind them, they are just here for the backend
         self.screen:pygame.Surface=None
         self.letterboxViewPort:pygame.Surface=None
+        self.integerScaleBuffer:pygame.Surface=None
         self.displayFrameBuffer:pygame.Surface=None
         self.renderFrameBuffer:pygame.Surface=None
         #our numbers used for fancy scaling
         self.scaledDisplayRect=pygame.Rect(0,0,self.internalWidth,self.internalHeight)
+        self.integerBufferSize:tuple[int,int]=(self.internalWidth,self.internalHeight)
         self.scaledSize:tuple[int,int]=(0,0)
+        self.scaleStepSize=10
+        self.scaleStepSize=self.scaleStepSize//10
+        self.shouldSmoothScale:bool=False
         #swapper and its events
         self.frameBufferSwapper:TKSWorkerThreads.frameBufferSwapper=None
         self.bufferSwapTrigger:threading.Event=threading.Event()
         self.newFrameTrigger:threading.Event=threading.Event()
-        self.swapFinishedSignal:threading.Event=threading.Event()
-        self.goAroundSignal:threading.Event=threading.Event()
         self.notBusyDrawing:threading.Event=threading.Event()
         #variables for controlling what gets rendered and when
         self.shouldDraw=True
@@ -177,6 +180,31 @@ class Renderer:
         self.displayFrameBuffer=temp
     
 
+    def _calculateScaling(self,screenSize:tuple[int,int]):
+        #calculate the new integer scaling value, making sure it isnt below 1
+        intScalingValue=max(1,min((screenSize[0]//self.internalWidth),(screenSize[1]//self.internalHeight)))
+        #calculate the new float scale value, making sure it isn't below 1, and adjust it for 10% steps
+        floatScalingValue=round(max(1,min((screenSize[0]/self.internalWidth),(screenSize[1]/self.internalHeight))),self.scaleStepSize)*self.scaleStepSize
+        #turn off smooth scaling if unnecessary
+        if((floatScalingValue-intScalingValue)>self.scaleStepSize):
+            self.shouldSmoothScale=True
+        else:
+            self.shouldSmoothScale=False
+
+        #update the letterbox viewport rect
+        self.scaledSize=(int(self.internalWidth*floatScalingValue),int(self.internalHeight*floatScalingValue))
+        self.scaledDisplayRect.width=self.scaledSize[0]
+        self.scaledDisplayRect.height=self.scaledSize[1]
+        self.scaledDisplayRect.x=((self.lastSize[0]-self.scaledSize[0])//2)
+        self.scaledDisplayRect.y=((self.lastSize[1]-self.scaledSize[1])//2)
+        #get a new renderer subsurface for that viewport, leaving the rest as letterbox
+        self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+        #handle integer scaling
+        self.integerBufferSize=(self.internalWidth*intScalingValue,self.internalHeight*intScalingValue)
+
+
+
+
     def frameTick(self) -> None:
         #get the current window size
         screenSize=self.screen.get_size()
@@ -186,16 +214,8 @@ class Renderer:
             #clear the new frame trigger if it has been set
             self.newFrameTrigger.clear()
             if((screenSize[0]!=0)and(screenSize[1]!=0)):
-                #calculate the new letterbox
-                scalingValue=min((self.lastSize[0]/self.internalWidth),(self.lastSize[1]/self.internalHeight))
-                #update the letterbox viewport rect
-                self.scaledSize=(int(self.internalWidth*scalingValue),int(self.internalHeight*scalingValue))
-                self.scaledDisplayRect.width=self.scaledSize[0]
-                self.scaledDisplayRect.height=self.scaledSize[1]
-                self.scaledDisplayRect.x=((self.lastSize[0]-self.scaledSize[0])//2)
-                self.scaledDisplayRect.y=((self.lastSize[1]-self.scaledSize[1])//2)
-                #get a new renderer subsurface for that viewport, leaving the rest as letterbox
-                self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+                #adjust the screen scaling
+                self._calculateScaling(screenSize)
                 #set the should draw flag so we update the screen with the new size
                 self.shouldDraw=True
 
@@ -214,8 +234,16 @@ class Renderer:
             self.notBusyDrawing.clear()
             #acquire the framebuffer access lock
             with self.framebufferAccessLock:
-                pygame.transform.smoothscale(self.displayFrameBuffer,self.scaledSize,self.letterboxViewPort)
+                pygame.transform.scale(self.displayFrameBuffer,self.integerBufferSize,self.integerScaleBuffer)
             self.notBusyDrawing.set()
+            
+            #depending on if smooth scaling is turned on:
+            if(self.shouldSmoothScale):
+                #smooth scale to the screen
+                pygame.transform.smoothscale(self.integerScaleBuffer,self.scaledSize,self.letterboxViewPort)
+            else:
+                #blit to the screen
+                self.letterboxViewPort.blit(self.integerScaleBuffer,self.scaledDisplayRect)
             #flip the display
             pygame.display.flip()
             #reset the should draw flag
@@ -289,20 +317,14 @@ class Renderer:
 
 
 
-
-
-        
-        
-
     def start(self) -> None:
         #make sure the display is inactive
         if(pygame.display.get_active()):
             pygame.display.quit()
         #init the display and framebuffer
         self.screen=pygame.display.set_mode(size=(self.internalWidth, self.internalHeight),vsync=1, flags=pygame.DOUBLEBUF|pygame.RESIZABLE|pygame.SCALED)
-        self.stagingFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.integerScaleBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
-        self.swapFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         #clear any old threads
         if(self.frameBufferSwapper!=None):
