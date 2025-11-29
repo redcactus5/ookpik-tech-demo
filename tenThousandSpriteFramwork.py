@@ -4,7 +4,6 @@ import threading
 import pygame
 import pygame_gui
 from fastFunctions.TKSFastFunctions import fastDisplayListGeneratorLoop
-import math
 import TKSWorkerThreads
 #TKS engine
 
@@ -185,7 +184,7 @@ class Renderer:
         #calculate the new float scale value, making sure it isn't below 1, and adjust it for 10% steps
         floatScalingValue=round(max(1,min((screenSize[0]/self.internalWidth),(screenSize[1]/self.internalHeight)))/self.scaleStepSize)*self.scaleStepSize
         #turn off smooth scaling if unnecessary
-        if((floatScalingValue-intScalingValue)>self.scaleStepSize):
+        if((floatScalingValue-intScalingValue)>(self.scaleStepSize//100)):
             self.shouldSmoothScale=True
         else:
             self.shouldSmoothScale=False
