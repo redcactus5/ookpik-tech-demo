@@ -107,7 +107,7 @@ class BasicSprite(pygame.sprite.Sprite):
 
 
 
-
+#no rotation because this is python, and im not learning how to do it, and it would require cython anyway
 class Camera:
     def __init__(self,x,y,width,height) -> None:
         self.viewRect=pygame.Rect(x,y,width,height)
@@ -131,7 +131,7 @@ class Camera:
 
 
 
-
+#no fullscreen effects processor system implemented, may be done later if needed
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int, targetFrameRate:int) -> None:
         #config stuff
