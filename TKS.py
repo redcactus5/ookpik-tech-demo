@@ -8,6 +8,7 @@ import pygame
 import pygame_gui
 from fastFunctions.TKSFastFunctions import fastDisplayListGeneratorLoop
 import TKSWorkerThreads
+import TKSSprites
 #TKS engine
 
 
@@ -44,59 +45,6 @@ def getImageSize(image:pygame.Surface):
     imageRect=image.get_rect()
     return (imageRect.width,imageRect.height)
 
-
-class BasicSprite(pygame.sprite.Sprite):
-    def __init__(self,x:int,y:int,width:int,height:int,image:pygame.Surface) -> None:
-        super().__init__()
-        #init texture
-        self.image:pygame.Surface=image
-        #init rects
-        self.rect:pygame.Rect=pygame.Rect(x,y,width,height)
-        self.imageRect:pygame.Rect=self.image.get_rect()
-        #init visibility
-        self.visible=True
-        #init image pos
-        self.imageRect.x=self.rect.x
-        self.imageRect.y=self.rect.y
-        #init image offset
-        self.imageOffsetX=0
-        self.imageOffsetY=0
-        
-
-
-    def hide(self):
-        self.visible=False
-
-
-
-    def show(self):
-        self.visible=True
- 
-
-    def changeTexture(self, newTexture:pygame.Surface):
-        self.image=newTexture
-        self.imageRect=self.image.get_rect()
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
-
-    def setPos(self,x,y):
-        self.rect.x=x
-        self.rect.y=y
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
-
-
-    def move(self,x,y):
-       self.rect.x+=x
-       self.rect.y+=y
-       self.imageRect.x=self.rect.x+self.imageOffsetX
-       self.imageRect.y=self.rect.y+self.imageOffsetY
-
-    def setTextureOffset(self,x,y):
-        self.imageOffsetX=x
-        self.imageOffsetY=y
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
 
 
     
@@ -165,7 +113,7 @@ class Renderer:
         self.layerCount:int=layers
         self.layers:list[pygame.sprite.Group]=[pygame.sprite.Group() for l in range(layers)]
         #speed optimization i didnt want but must have
-        self.internalLayers:list[set[BasicSprite]]=[set() for l in range(layers)]
+        self.internalLayers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
         
 
         #camera feature
@@ -304,14 +252,14 @@ class Renderer:
 
 
     
-    def addSprite(self,sprite:BasicSprite,layer:int):
+    def addSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
         #update both the sprite group representation and the set representation, plus the camera, so everything is seamless and doesn't break
         #because of how sprite groups work and my obsession with speed in an inherently slow language
         self.layers[layer].add(sprite)
         self.internalLayers[layer].add(sprite)
         
 
-    def addSprites(self,sprites:list[BasicSprite],layer:int):
+    def addSprites(self,sprites:list[TKSSprites.BasicSprite],layer:int):
         #update both the sprite group representation and the set representation, plus the camera,
         #for all objects, so everything is seamless and doesn't break
         self.layers[layer].add(sprites)
@@ -346,22 +294,22 @@ class Renderer:
 
 
 
-    def deleteSprite(self,sprite:BasicSprite,layer:int):
+    def deleteSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
         if(self.layers[layer].has(sprite)):
             self.layers[layer].remove(sprite)
             self.internalLayers[layer].remove(sprite)
     
-    def deleteSprites(self,spriteList:list[BasicSprite],layer:int):
+    def deleteSprites(self,spriteList:list[TKSSprites.BasicSprite],layer:int):
         for sprite in spriteList:
             if(self.layers[layer].has(sprite)):
                 self.layers[layer].remove(sprite)
                 self.internalLayers[layer].remove(sprite)
 
-    def deleteSpriteFromAllLayers(self,sprite:BasicSprite):
+    def deleteSpriteFromAllLayers(self,sprite:TKSSprites.BasicSprite):
         for layer in range(len(self.layers)):
             self.deleteSprite(sprite,layer)
  
-    def deleteSpritesFromAllLayers(self,spriteList:list[BasicSprite]):
+    def deleteSpritesFromAllLayers(self,spriteList:list[TKSSprites.BasicSprite]):
         for layer in range(len(self.layers)):
             self.deleteSprites(spriteList,layer)
 
@@ -392,6 +340,8 @@ class Core:
         self.gameLogic=gameLogic
         self.renderer=renderer
 
+        
+
         #config variables
         self.targetFps=targetFps
 
@@ -414,6 +364,7 @@ class Core:
                     self.running=False
                     break
                 self.eventHandler.scanEvent(event)
+            
             
             self.gameLogic.frameTick()
 
