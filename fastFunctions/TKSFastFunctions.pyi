@@ -1,6 +1,6 @@
 
 from typing import List, Tuple
-from TKS import BasicSprite
+from TKSSprites import BasicSprite
 from pygame import Rect
 from pygame import surface
 

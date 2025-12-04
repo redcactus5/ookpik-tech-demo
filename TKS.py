@@ -339,8 +339,8 @@ class Core:
         self.eventHandler=eventHandler
         self.gameLogic=gameLogic
         self.renderer=renderer
+        self.unlockedUpdater=TKSWorkerThreads.UnlockedTicker(self)
 
-        
 
         #config variables
         self.targetFps=targetFps
@@ -350,7 +350,9 @@ class Core:
         self.deltaTime:float=0
         
         
-    
+        
+    def unlockedTick(self):
+        self.gameLogic.unlockedTick()
 
 
     def run(self):
@@ -372,7 +374,7 @@ class Core:
 
             self.deltaTime= self.clock.tick(self.targetFps) / 1000
 
-
+        self.unlockedUpdater.shutdown()
         pygame.quit()
             
 
