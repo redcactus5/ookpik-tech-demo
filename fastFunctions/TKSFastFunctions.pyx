@@ -1,7 +1,7 @@
 from libc.stdint cimport int32_t
 
 
-def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRectReference):
+def fastDisplayListGeneratorLoop(set internalLayersReference, object cameraRectReference):
     #cache the camera positions
     cdef int cameraLeft=cameraRectReference.left
     cdef int cameraRight=cameraRectReference.right
@@ -12,7 +12,10 @@ def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRe
     cdef list displayList=[]
     cdef set layer
     cdef object sprite
+    cdef object spriteSheet
+    cdef list[object] textures
     cdef object imageRect
+    cdef int frameIndex
 
     #variables for the four corners and coords
     cdef int spriteLeft
@@ -38,7 +41,10 @@ def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRe
                 #viewport culling check
                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
-                    displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
+                    spriteSheet=sprite.currentSpriteSheet
+                    textures=spriteSheet.textures
+                    frameIndex=spriteSheet.frame
+                    displayList.append((textures[frameIndex], (spriteX - cameraLeft, spriteY - cameraTop)))
     return displayList
 
 

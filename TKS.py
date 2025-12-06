@@ -369,8 +369,10 @@ class Core:
             
             
             self.gameLogic.frameTick()
-
+            self.unlockedUpdater.pause()
+            self.unlockedUpdater.waitForUnblock()
             self.renderer.frameTick()
+            self.unlockedUpdater.resume()
 
             self.deltaTime= self.clock.tick(self.targetFps) / 1000
 

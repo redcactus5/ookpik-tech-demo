@@ -68,6 +68,7 @@ class UnlockedTicker(threading.Thread):
         self.endTime:float=0
         self.running:bool=False
         self.unpaused:threading.Event=threading.Event()
+        self.renderUnblocked:threading.Event=threading.Event()
 
 
     def calculateLoops(self):
@@ -80,6 +81,7 @@ class UnlockedTicker(threading.Thread):
         start2=0
         end2=0
         trueInterval=0
+        loopsToRun=0
         while(self.running):
             self.unpaused.wait()
             self.endTime=time.perf_counter()
@@ -87,12 +89,15 @@ class UnlockedTicker(threading.Thread):
             if(self.loopInterval>0):
                 start2=time.perf_counter()
                 self.startTime=time.perf_counter()
-                for loop in range(self.neededLoops):
-                    self.unpaused.wait()
+                loopsToRun=self.neededLoops
+                self.unpaused.wait()
+                self.renderUnblocked.clear()
+                for loop in range(loopsToRun):
                     self.neededLoops-=1
                     self.coreObject.unlockedTick()
                 end2=time.perf_counter()
                 trueInterval=self.loopInterval-(end2-start2)
+                self.renderUnblocked.set()
             
                     
             if(trueInterval>0):
@@ -104,6 +109,9 @@ class UnlockedTicker(threading.Thread):
 
     def resume(self):
         self.unpaused.set()
+
+    def waitForUnblock(self):
+        self.renderUnblocked.wait()
 
     def shutdown(self):
         self.running=False
