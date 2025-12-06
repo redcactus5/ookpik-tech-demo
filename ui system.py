@@ -22,12 +22,7 @@ TICKRATETARGET=120
 TITLE="ookpik map generator demo beta"
 LAYERCOUNT=6
 
-IMAGES:dict={}
 
-def initImages():
-    global IMAGES
-    #set up the terrain list
-    
     
     
 
