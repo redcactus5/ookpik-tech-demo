@@ -1791,8 +1791,13 @@ static CYTHON_INLINE int __Pyx_ParseKeywords(
 static void __Pyx_RaiseArgtupleInvalid(const char* func_name, int exact,
     Py_ssize_t num_min, Py_ssize_t num_max, Py_ssize_t num_found);
 
-/* RaiseUnexpectedTypeError.proto */
-static int __Pyx_RaiseUnexpectedTypeError(const char *expected, PyObject *obj);
+/* ArgTypeTestFunc.export */
+static int __Pyx__ArgTypeTest(PyObject *obj, PyTypeObject *type, const char *name, int exact);
+
+/* ArgTypeTest.proto */
+#define __Pyx_ArgTypeTest(obj, type, none_allowed, name, exact)\
+    ((likely(__Pyx_IS_TYPE(obj, type) | (none_allowed && (obj == Py_None)))) ? 1 :\
+        __Pyx__ArgTypeTest(obj, type, name, exact))
 
 /* PyThreadStateGet.proto (used by PyErrFetchRestore) */
 #if CYTHON_FAST_THREAD_STATE
@@ -1848,6 +1853,9 @@ static CYTHON_INLINE int __Pyx_set_iter_next(
         Py_ssize_t* ppos, PyObject **value,
         int source_is_set);
 
+/* RaiseUnexpectedTypeError.proto */
+static int __Pyx_RaiseUnexpectedTypeError(const char *expected, PyObject *obj);
+
 /* ListAppend.proto */
 #if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
 static CYTHON_INLINE int __Pyx_PyList_Append(PyObject* list, PyObject* x) {
@@ -1868,6 +1876,28 @@ static CYTHON_INLINE int __Pyx_PyList_Append(PyObject* list, PyObject* x) {
 #else
 #define __Pyx_PyList_Append(L,x) PyList_Append(L,x)
 #endif
+
+/* GetItemInt.proto */
+#define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck, has_gil, unsafe_shared)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_Fast(o, (Py_ssize_t)i, is_list, wraparound, boundscheck, unsafe_shared) :\
+    (is_list ? (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL) :\
+               __Pyx_GetItemInt_Generic(o, to_py_func(i))))
+#define __Pyx_GetItemInt_List(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck, has_gil, unsafe_shared)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_List_Fast(o, (Py_ssize_t)i, wraparound, boundscheck, unsafe_shared) :\
+    (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL))
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck, int unsafe_shared);
+#define __Pyx_GetItemInt_Tuple(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck, has_gil, unsafe_shared)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_Tuple_Fast(o, (Py_ssize_t)i, wraparound, boundscheck, unsafe_shared) :\
+    (PyErr_SetString(PyExc_IndexError, "tuple index out of range"), (PyObject*)NULL))
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck, int unsafe_shared);
+static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j);
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i,
+                                                     int is_list, int wraparound, int boundscheck, int unsafe_shared);
 
 /* dict_setdefault.proto (used by FetchCommonType) */
 static CYTHON_INLINE PyObject *__Pyx_PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *default_value);
@@ -2261,7 +2291,7 @@ typedef struct {
   __Pyx_CachedCFunction __pyx_umethod_PyDict_Type_pop;
   __Pyx_CachedCFunction __pyx_umethod_PyDict_Type_values;
   PyObject *__pyx_codeobj_tab[1];
-  PyObject *__pyx_string_tab[44];
+  PyObject *__pyx_string_tab[50];
 /* #### Code section: module_state_contents ### */
 /* CommonTypesMetaclass.module_state_decls */
 PyTypeObject *__pyx_CommonTypesMetaclassType;
@@ -2303,49 +2333,55 @@ static __pyx_mstatetype * const __pyx_mstate_global = &__pyx_mstate_global_stati
 #endif
 /* #### Code section: constant_name_defines ### */
 #define __pyx_kp_u_ __pyx_string_tab[0]
-#define __pyx_kp_u_TKSFastFunctions_pyx __pyx_string_tab[1]
-#define __pyx_n_u_Pyx_PyDict_NextRef __pyx_string_tab[2]
-#define __pyx_n_u_TKSFastFunctions __pyx_string_tab[3]
-#define __pyx_n_u_asyncio_coroutines __pyx_string_tab[4]
-#define __pyx_n_u_bottom __pyx_string_tab[5]
-#define __pyx_n_u_cameraBottom __pyx_string_tab[6]
-#define __pyx_n_u_cameraLeft __pyx_string_tab[7]
-#define __pyx_n_u_cameraRectReference __pyx_string_tab[8]
-#define __pyx_n_u_cameraRight __pyx_string_tab[9]
-#define __pyx_n_u_cameraTop __pyx_string_tab[10]
-#define __pyx_n_u_cline_in_traceback __pyx_string_tab[11]
-#define __pyx_n_u_displayList __pyx_string_tab[12]
-#define __pyx_n_u_fastDisplayListGeneratorLoop __pyx_string_tab[13]
-#define __pyx_n_u_func __pyx_string_tab[14]
-#define __pyx_n_u_image __pyx_string_tab[15]
-#define __pyx_n_u_imageRect __pyx_string_tab[16]
-#define __pyx_n_u_internalLayersReference __pyx_string_tab[17]
-#define __pyx_n_u_is_coroutine __pyx_string_tab[18]
-#define __pyx_n_u_items __pyx_string_tab[19]
-#define __pyx_n_u_layer __pyx_string_tab[20]
-#define __pyx_n_u_left __pyx_string_tab[21]
-#define __pyx_n_u_main __pyx_string_tab[22]
-#define __pyx_n_u_module __pyx_string_tab[23]
-#define __pyx_n_u_name __pyx_string_tab[24]
-#define __pyx_n_u_pop __pyx_string_tab[25]
-#define __pyx_n_u_qualname __pyx_string_tab[26]
-#define __pyx_n_u_right __pyx_string_tab[27]
-#define __pyx_n_u_set_name __pyx_string_tab[28]
-#define __pyx_n_u_setdefault __pyx_string_tab[29]
-#define __pyx_n_u_sprite __pyx_string_tab[30]
-#define __pyx_n_u_spriteBottom __pyx_string_tab[31]
-#define __pyx_n_u_spriteLeft __pyx_string_tab[32]
-#define __pyx_n_u_spriteRight __pyx_string_tab[33]
-#define __pyx_n_u_spriteTop __pyx_string_tab[34]
-#define __pyx_n_u_spriteX __pyx_string_tab[35]
-#define __pyx_n_u_spriteY __pyx_string_tab[36]
-#define __pyx_n_u_test __pyx_string_tab[37]
-#define __pyx_n_u_top __pyx_string_tab[38]
-#define __pyx_n_u_values __pyx_string_tab[39]
-#define __pyx_n_u_visible __pyx_string_tab[40]
-#define __pyx_n_u_x __pyx_string_tab[41]
-#define __pyx_n_u_y __pyx_string_tab[42]
-#define __pyx_kp_b_iso88591_1_A_Q_Ja_vV1_9A_IQ_1_Ya_L_d_S_A __pyx_string_tab[43]
+#define __pyx_kp_u_Note_that_Cython_is_deliberately __pyx_string_tab[1]
+#define __pyx_kp_u_TKSFastFunctions_pyx __pyx_string_tab[2]
+#define __pyx_kp_u_add_note __pyx_string_tab[3]
+#define __pyx_n_u_Pyx_PyDict_NextRef __pyx_string_tab[4]
+#define __pyx_n_u_TKSFastFunctions __pyx_string_tab[5]
+#define __pyx_n_u_asyncio_coroutines __pyx_string_tab[6]
+#define __pyx_n_u_bottom __pyx_string_tab[7]
+#define __pyx_n_u_cameraBottom __pyx_string_tab[8]
+#define __pyx_n_u_cameraLeft __pyx_string_tab[9]
+#define __pyx_n_u_cameraRectReference __pyx_string_tab[10]
+#define __pyx_n_u_cameraRight __pyx_string_tab[11]
+#define __pyx_n_u_cameraTop __pyx_string_tab[12]
+#define __pyx_n_u_cline_in_traceback __pyx_string_tab[13]
+#define __pyx_n_u_currentSpriteSheet __pyx_string_tab[14]
+#define __pyx_n_u_displayList __pyx_string_tab[15]
+#define __pyx_n_u_fastDisplayListGeneratorLoop __pyx_string_tab[16]
+#define __pyx_n_u_frame __pyx_string_tab[17]
+#define __pyx_n_u_frameIndex __pyx_string_tab[18]
+#define __pyx_n_u_func __pyx_string_tab[19]
+#define __pyx_n_u_imageRect __pyx_string_tab[20]
+#define __pyx_n_u_internalLayersReference __pyx_string_tab[21]
+#define __pyx_n_u_is_coroutine __pyx_string_tab[22]
+#define __pyx_n_u_items __pyx_string_tab[23]
+#define __pyx_n_u_layer __pyx_string_tab[24]
+#define __pyx_n_u_left __pyx_string_tab[25]
+#define __pyx_n_u_main __pyx_string_tab[26]
+#define __pyx_n_u_module __pyx_string_tab[27]
+#define __pyx_n_u_name __pyx_string_tab[28]
+#define __pyx_n_u_pop __pyx_string_tab[29]
+#define __pyx_n_u_qualname __pyx_string_tab[30]
+#define __pyx_n_u_right __pyx_string_tab[31]
+#define __pyx_n_u_set_name __pyx_string_tab[32]
+#define __pyx_n_u_setdefault __pyx_string_tab[33]
+#define __pyx_n_u_sprite __pyx_string_tab[34]
+#define __pyx_n_u_spriteBottom __pyx_string_tab[35]
+#define __pyx_n_u_spriteLeft __pyx_string_tab[36]
+#define __pyx_n_u_spriteRight __pyx_string_tab[37]
+#define __pyx_n_u_spriteSheet __pyx_string_tab[38]
+#define __pyx_n_u_spriteTop __pyx_string_tab[39]
+#define __pyx_n_u_spriteX __pyx_string_tab[40]
+#define __pyx_n_u_spriteY __pyx_string_tab[41]
+#define __pyx_n_u_test __pyx_string_tab[42]
+#define __pyx_n_u_textures __pyx_string_tab[43]
+#define __pyx_n_u_top __pyx_string_tab[44]
+#define __pyx_n_u_values __pyx_string_tab[45]
+#define __pyx_n_u_visible __pyx_string_tab[46]
+#define __pyx_n_u_x __pyx_string_tab[47]
+#define __pyx_n_u_y __pyx_string_tab[48]
+#define __pyx_kp_b_iso88591_1_A_Q_Ja_vV1_9A_IQ_1_Ya_L_d_S_A __pyx_string_tab[49]
 /* #### Code section: module_state_clear ### */
 #if CYTHON_USE_MODULE_STATE
 static CYTHON_SMALL_CODE int __pyx_m_clear(PyObject *m) {
@@ -2361,7 +2397,7 @@ static CYTHON_SMALL_CODE int __pyx_m_clear(PyObject *m) {
   __Pyx_State_RemoveModule(NULL);
   #endif
   for (int i=0; i<1; ++i) { Py_CLEAR(clear_module_state->__pyx_codeobj_tab[i]); }
-  for (int i=0; i<44; ++i) { Py_CLEAR(clear_module_state->__pyx_string_tab[i]); }
+  for (int i=0; i<50; ++i) { Py_CLEAR(clear_module_state->__pyx_string_tab[i]); }
 /* #### Code section: module_state_clear_contents ### */
 /* CommonTypesMetaclass.module_state_clear */
 Py_CLEAR(clear_module_state->__pyx_CommonTypesMetaclassType);
@@ -2385,7 +2421,7 @@ static CYTHON_SMALL_CODE int __pyx_m_traverse(PyObject *m, visitproc visit, void
   __Pyx_VISIT_CONST(traverse_module_state->__pyx_empty_bytes);
   __Pyx_VISIT_CONST(traverse_module_state->__pyx_empty_unicode);
   for (int i=0; i<1; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_codeobj_tab[i]); }
-  for (int i=0; i<44; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_string_tab[i]); }
+  for (int i=0; i<50; ++i) { __Pyx_VISIT_CONST(traverse_module_state->__pyx_string_tab[i]); }
 /* #### Code section: module_state_traverse_contents ### */
 /* CommonTypesMetaclass.module_state_traverse */
 Py_VISIT(traverse_module_state->__pyx_CommonTypesMetaclassType);
@@ -2402,7 +2438,7 @@ return 0;
 /* "TKSFastFunctions.pyx":4
  * 
  * 
- * def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRectReference):             # <<<<<<<<<<<<<<
+ * def fastDisplayListGeneratorLoop(set internalLayersReference, object cameraRectReference):             # <<<<<<<<<<<<<<
  *     #cache the camera positions
  *     cdef int cameraLeft=cameraRectReference.left
 */
@@ -2474,7 +2510,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       values[1] = __Pyx_ArgRef_FASTCALL(__pyx_args, 1);
       if (!CYTHON_ASSUME_SAFE_MACROS && unlikely(!values[1])) __PYX_ERR(0, 4, __pyx_L3_error)
     }
-    __pyx_v_internalLayersReference = values[0];
+    __pyx_v_internalLayersReference = ((PyObject*)values[0]);
     __pyx_v_cameraRectReference = values[1];
   }
   goto __pyx_L6_skip;
@@ -2490,12 +2526,22 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_internalLayersReference), (&PySet_Type), 1, "internalLayersReference", 1))) __PYX_ERR(0, 4, __pyx_L1_error)
   __pyx_r = __pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(__pyx_self, __pyx_v_internalLayersReference, __pyx_v_cameraRectReference);
 
   /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
   for (Py_ssize_t __pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
     Py_XDECREF(values[__pyx_temp]);
   }
+  goto __pyx_L7_cleaned_up;
+  __pyx_L0:;
+  for (Py_ssize_t __pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
+    Py_XDECREF(values[__pyx_temp]);
+  }
+  __pyx_L7_cleaned_up:;
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
@@ -2508,7 +2554,10 @@ static PyObject *__pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(CYTHON
   PyObject *__pyx_v_displayList = 0;
   PyObject *__pyx_v_layer = 0;
   PyObject *__pyx_v_sprite = 0;
+  PyObject *__pyx_v_spriteSheet = 0;
+  PyObject *__pyx_v_textures = 0;
   PyObject *__pyx_v_imageRect = 0;
+  int __pyx_v_frameIndex;
   int __pyx_v_spriteLeft;
   int __pyx_v_spriteRight;
   int __pyx_v_spriteTop;
@@ -2520,25 +2569,26 @@ static PyObject *__pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(CYTHON
   PyObject *__pyx_t_1 = NULL;
   int __pyx_t_2;
   Py_ssize_t __pyx_t_3;
-  PyObject *(*__pyx_t_4)(PyObject *);
+  Py_ssize_t __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
-  Py_ssize_t __pyx_t_6;
+  int __pyx_t_6;
   Py_ssize_t __pyx_t_7;
-  PyObject *__pyx_t_8 = NULL;
-  int __pyx_t_9;
+  Py_ssize_t __pyx_t_8;
+  PyObject *__pyx_t_9 = NULL;
   int __pyx_t_10;
   int __pyx_t_11;
-  PyObject *__pyx_t_12 = NULL;
+  int __pyx_t_12;
   PyObject *__pyx_t_13 = NULL;
   PyObject *__pyx_t_14 = NULL;
-  int __pyx_t_15;
+  PyObject *__pyx_t_15 = NULL;
+  int __pyx_t_16;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("fastDisplayListGeneratorLoop", 0);
 
   /* "TKSFastFunctions.pyx":6
- * def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRectReference):
+ * def fastDisplayListGeneratorLoop(set internalLayersReference, object cameraRectReference):
  *     #cache the camera positions
  *     cdef int cameraLeft=cameraRectReference.left             # <<<<<<<<<<<<<<
  *     cdef int cameraRight=cameraRectReference.right
@@ -2601,278 +2651,282 @@ static PyObject *__pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(CYTHON
   __pyx_v_displayList = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "TKSFastFunctions.pyx":26
+  /* "TKSFastFunctions.pyx":29
  * 
  *     #the main nested loops
  *     for layer in internalLayersReference:             # <<<<<<<<<<<<<<
  *         for sprite in layer:
  *             #early visibility check optimisation
 */
-  if (likely(PyList_CheckExact(__pyx_v_internalLayersReference)) || PyTuple_CheckExact(__pyx_v_internalLayersReference)) {
-    __pyx_t_1 = __pyx_v_internalLayersReference; __Pyx_INCREF(__pyx_t_1);
-    __pyx_t_3 = 0;
-    __pyx_t_4 = NULL;
-  } else {
-    __pyx_t_3 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_internalLayersReference); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 26, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_4 = (CYTHON_COMPILING_IN_LIMITED_API) ? PyIter_Next : __Pyx_PyObject_GetIterNextFunc(__pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 26, __pyx_L1_error)
-  }
-  for (;;) {
-    if (likely(!__pyx_t_4)) {
-      if (likely(PyList_CheckExact(__pyx_t_1))) {
-        {
-          Py_ssize_t __pyx_temp = __Pyx_PyList_GET_SIZE(__pyx_t_1);
-          #if !CYTHON_ASSUME_SAFE_SIZE
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 26, __pyx_L1_error)
-          #endif
-          if (__pyx_t_3 >= __pyx_temp) break;
-        }
-        __pyx_t_5 = __Pyx_PyList_GetItemRefFast(__pyx_t_1, __pyx_t_3, __Pyx_ReferenceSharing_OwnStrongReference);
-        ++__pyx_t_3;
-      } else {
-        {
-          Py_ssize_t __pyx_temp = __Pyx_PyTuple_GET_SIZE(__pyx_t_1);
-          #if !CYTHON_ASSUME_SAFE_SIZE
-          if (unlikely((__pyx_temp < 0))) __PYX_ERR(0, 26, __pyx_L1_error)
-          #endif
-          if (__pyx_t_3 >= __pyx_temp) break;
-        }
-        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = __Pyx_NewRef(PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_3));
-        #else
-        __pyx_t_5 = __Pyx_PySequence_ITEM(__pyx_t_1, __pyx_t_3);
-        #endif
-        ++__pyx_t_3;
-      }
-      if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 26, __pyx_L1_error)
-    } else {
-      __pyx_t_5 = __pyx_t_4(__pyx_t_1);
-      if (unlikely(!__pyx_t_5)) {
-        PyObject* exc_type = PyErr_Occurred();
-        if (exc_type) {
-          if (unlikely(!__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) __PYX_ERR(0, 26, __pyx_L1_error)
-          PyErr_Clear();
-        }
-        break;
-      }
-    }
+  __pyx_t_3 = 0;
+  __pyx_t_5 = __Pyx_set_iterator(__pyx_v_internalLayersReference, 1, (&__pyx_t_4), (&__pyx_t_2)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 29, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_XDECREF(__pyx_t_1);
+  __pyx_t_1 = __pyx_t_5;
+  __pyx_t_5 = 0;
+  while (1) {
+    __pyx_t_6 = __Pyx_set_iter_next(__pyx_t_1, __pyx_t_4, &__pyx_t_3, &__pyx_t_5, __pyx_t_2);
+    if (unlikely(__pyx_t_6 == 0)) break;
+    if (unlikely(__pyx_t_6 == -1)) __PYX_ERR(0, 29, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    if (!(likely(PySet_CheckExact(__pyx_t_5))||((__pyx_t_5) == Py_None) || __Pyx_RaiseUnexpectedTypeError("set", __pyx_t_5))) __PYX_ERR(0, 26, __pyx_L1_error)
+    if (!(likely(PySet_CheckExact(__pyx_t_5))||((__pyx_t_5) == Py_None) || __Pyx_RaiseUnexpectedTypeError("set", __pyx_t_5))) __PYX_ERR(0, 29, __pyx_L1_error)
     __Pyx_XDECREF_SET(__pyx_v_layer, ((PyObject*)__pyx_t_5));
     __pyx_t_5 = 0;
 
-    /* "TKSFastFunctions.pyx":27
+    /* "TKSFastFunctions.pyx":30
  *     #the main nested loops
  *     for layer in internalLayersReference:
  *         for sprite in layer:             # <<<<<<<<<<<<<<
  *             #early visibility check optimisation
  *             if(<bool>sprite.visible):
 */
-    __pyx_t_6 = 0;
-    __pyx_t_8 = __Pyx_set_iterator(__pyx_v_layer, 1, (&__pyx_t_7), (&__pyx_t_2)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 27, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_8);
+    __pyx_t_7 = 0;
+    __pyx_t_9 = __Pyx_set_iterator(__pyx_v_layer, 1, (&__pyx_t_8), (&__pyx_t_6)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 30, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_9);
     __Pyx_XDECREF(__pyx_t_5);
-    __pyx_t_5 = __pyx_t_8;
-    __pyx_t_8 = 0;
+    __pyx_t_5 = __pyx_t_9;
+    __pyx_t_9 = 0;
     while (1) {
-      __pyx_t_9 = __Pyx_set_iter_next(__pyx_t_5, __pyx_t_7, &__pyx_t_6, &__pyx_t_8, __pyx_t_2);
-      if (unlikely(__pyx_t_9 == 0)) break;
-      if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(0, 27, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_8);
-      __Pyx_XDECREF_SET(__pyx_v_sprite, __pyx_t_8);
-      __pyx_t_8 = 0;
+      __pyx_t_10 = __Pyx_set_iter_next(__pyx_t_5, __pyx_t_8, &__pyx_t_7, &__pyx_t_9, __pyx_t_6);
+      if (unlikely(__pyx_t_10 == 0)) break;
+      if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 30, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_XDECREF_SET(__pyx_v_sprite, __pyx_t_9);
+      __pyx_t_9 = 0;
 
-      /* "TKSFastFunctions.pyx":29
+      /* "TKSFastFunctions.pyx":32
  *         for sprite in layer:
  *             #early visibility check optimisation
  *             if(<bool>sprite.visible):             # <<<<<<<<<<<<<<
  *                 #load the sprites
  *                 imageRect=sprite.imageRect
 */
-      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_sprite, __pyx_mstate_global->__pyx_n_u_visible); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 29, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_10 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely((__pyx_t_10 < 0))) __PYX_ERR(0, 29, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      if (__pyx_t_10) {
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_sprite, __pyx_mstate_global->__pyx_n_u_visible); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 32, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __pyx_t_11 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely((__pyx_t_11 < 0))) __PYX_ERR(0, 32, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+      if (__pyx_t_11) {
 
-        /* "TKSFastFunctions.pyx":31
+        /* "TKSFastFunctions.pyx":34
  *             if(<bool>sprite.visible):
  *                 #load the sprites
  *                 imageRect=sprite.imageRect             # <<<<<<<<<<<<<<
  *                 spriteLeft=imageRect.left
  *                 spriteRight=imageRect.right
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_sprite, __pyx_mstate_global->__pyx_n_u_imageRect); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 31, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __Pyx_XDECREF_SET(__pyx_v_imageRect, __pyx_t_8);
-        __pyx_t_8 = 0;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_sprite, __pyx_mstate_global->__pyx_n_u_imageRect); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 34, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __Pyx_XDECREF_SET(__pyx_v_imageRect, __pyx_t_9);
+        __pyx_t_9 = 0;
 
-        /* "TKSFastFunctions.pyx":32
+        /* "TKSFastFunctions.pyx":35
  *                 #load the sprites
  *                 imageRect=sprite.imageRect
  *                 spriteLeft=imageRect.left             # <<<<<<<<<<<<<<
  *                 spriteRight=imageRect.right
  *                 spriteTop=imageRect.top
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_left); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 32, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyLong_As_int(__pyx_t_8); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 32, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_v_spriteLeft = __pyx_t_9;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_left); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 35, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 35, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_v_spriteLeft = __pyx_t_10;
 
-        /* "TKSFastFunctions.pyx":33
+        /* "TKSFastFunctions.pyx":36
  *                 imageRect=sprite.imageRect
  *                 spriteLeft=imageRect.left
  *                 spriteRight=imageRect.right             # <<<<<<<<<<<<<<
  *                 spriteTop=imageRect.top
  *                 spriteBottom=imageRect.bottom
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_right); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 33, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyLong_As_int(__pyx_t_8); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 33, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_v_spriteRight = __pyx_t_9;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_right); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 36, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 36, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_v_spriteRight = __pyx_t_10;
 
-        /* "TKSFastFunctions.pyx":34
+        /* "TKSFastFunctions.pyx":37
  *                 spriteLeft=imageRect.left
  *                 spriteRight=imageRect.right
  *                 spriteTop=imageRect.top             # <<<<<<<<<<<<<<
  *                 spriteBottom=imageRect.bottom
  *                 spriteX=imageRect.x
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_top); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 34, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyLong_As_int(__pyx_t_8); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 34, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_v_spriteTop = __pyx_t_9;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_top); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 37, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_v_spriteTop = __pyx_t_10;
 
-        /* "TKSFastFunctions.pyx":35
+        /* "TKSFastFunctions.pyx":38
  *                 spriteRight=imageRect.right
  *                 spriteTop=imageRect.top
  *                 spriteBottom=imageRect.bottom             # <<<<<<<<<<<<<<
  *                 spriteX=imageRect.x
  *                 spriteY=imageRect.y
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_bottom); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 35, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyLong_As_int(__pyx_t_8); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 35, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_v_spriteBottom = __pyx_t_9;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_bottom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 38, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 38, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_v_spriteBottom = __pyx_t_10;
 
-        /* "TKSFastFunctions.pyx":36
+        /* "TKSFastFunctions.pyx":39
  *                 spriteTop=imageRect.top
  *                 spriteBottom=imageRect.bottom
  *                 spriteX=imageRect.x             # <<<<<<<<<<<<<<
  *                 spriteY=imageRect.y
  *                 #viewport culling check
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_x); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 36, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyLong_As_int(__pyx_t_8); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 36, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_v_spriteX = __pyx_t_9;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_x); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 39, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 39, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_v_spriteX = __pyx_t_10;
 
-        /* "TKSFastFunctions.pyx":37
+        /* "TKSFastFunctions.pyx":40
  *                 spriteBottom=imageRect.bottom
  *                 spriteX=imageRect.x
  *                 spriteY=imageRect.y             # <<<<<<<<<<<<<<
  *                 #viewport culling check
  *                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
 */
-        __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_y); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 37, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyLong_As_int(__pyx_t_8); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-        __pyx_v_spriteY = __pyx_t_9;
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_imageRect, __pyx_mstate_global->__pyx_n_u_y); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 40, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 40, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __pyx_v_spriteY = __pyx_t_10;
 
-        /* "TKSFastFunctions.pyx":39
+        /* "TKSFastFunctions.pyx":42
  *                 spriteY=imageRect.y
  *                 #viewport culling check
  *                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and             # <<<<<<<<<<<<<<
  *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
- *                     displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
+ *                     spriteSheet=sprite.currentSpriteSheet
 */
-        __pyx_t_11 = (__pyx_v_spriteRight >= __pyx_v_cameraLeft);
-        if (__pyx_t_11) {
+        __pyx_t_12 = (__pyx_v_spriteRight >= __pyx_v_cameraLeft);
+        if (__pyx_t_12) {
         } else {
-          __pyx_t_10 = __pyx_t_11;
+          __pyx_t_11 = __pyx_t_12;
           goto __pyx_L9_bool_binop_done;
         }
-        __pyx_t_11 = (__pyx_v_spriteLeft <= __pyx_v_cameraRight);
-        if (__pyx_t_11) {
+        __pyx_t_12 = (__pyx_v_spriteLeft <= __pyx_v_cameraRight);
+        if (__pyx_t_12) {
         } else {
-          __pyx_t_10 = __pyx_t_11;
+          __pyx_t_11 = __pyx_t_12;
           goto __pyx_L9_bool_binop_done;
         }
 
-        /* "TKSFastFunctions.pyx":40
+        /* "TKSFastFunctions.pyx":43
  *                 #viewport culling check
  *                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
  *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):             # <<<<<<<<<<<<<<
- *                     displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
- *     return displayList
+ *                     spriteSheet=sprite.currentSpriteSheet
+ *                     textures=spriteSheet.textures
 */
-        __pyx_t_11 = (__pyx_v_spriteTop <= __pyx_v_cameraBottom);
-        if (__pyx_t_11) {
+        __pyx_t_12 = (__pyx_v_spriteTop <= __pyx_v_cameraBottom);
+        if (__pyx_t_12) {
         } else {
-          __pyx_t_10 = __pyx_t_11;
+          __pyx_t_11 = __pyx_t_12;
           goto __pyx_L9_bool_binop_done;
         }
-        __pyx_t_11 = (__pyx_v_spriteBottom >= __pyx_v_cameraTop);
-        __pyx_t_10 = __pyx_t_11;
+        __pyx_t_12 = (__pyx_v_spriteBottom >= __pyx_v_cameraTop);
+        __pyx_t_11 = __pyx_t_12;
         __pyx_L9_bool_binop_done:;
 
-        /* "TKSFastFunctions.pyx":39
+        /* "TKSFastFunctions.pyx":42
  *                 spriteY=imageRect.y
  *                 #viewport culling check
  *                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and             # <<<<<<<<<<<<<<
  *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
- *                     displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
+ *                     spriteSheet=sprite.currentSpriteSheet
 */
-        if (__pyx_t_10) {
+        if (__pyx_t_11) {
 
-          /* "TKSFastFunctions.pyx":41
+          /* "TKSFastFunctions.pyx":44
  *                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
  *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
- *                     displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))             # <<<<<<<<<<<<<<
+ *                     spriteSheet=sprite.currentSpriteSheet             # <<<<<<<<<<<<<<
+ *                     textures=spriteSheet.textures
+ *                     frameIndex=spriteSheet.frame
+*/
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_sprite, __pyx_mstate_global->__pyx_n_u_currentSpriteSheet); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 44, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          __Pyx_XDECREF_SET(__pyx_v_spriteSheet, __pyx_t_9);
+          __pyx_t_9 = 0;
+
+          /* "TKSFastFunctions.pyx":45
+ *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
+ *                     spriteSheet=sprite.currentSpriteSheet
+ *                     textures=spriteSheet.textures             # <<<<<<<<<<<<<<
+ *                     frameIndex=spriteSheet.frame
+ *                     displayList.append((textures[frameIndex], (spriteX - cameraLeft, spriteY - cameraTop)))
+*/
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_spriteSheet, __pyx_mstate_global->__pyx_n_u_textures); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 45, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          if (!(likely(PyList_CheckExact(__pyx_t_9))||((__pyx_t_9) == Py_None) || __Pyx_RaiseUnexpectedTypeError("list", __pyx_t_9))) __PYX_ERR(0, 45, __pyx_L1_error)
+          __Pyx_XDECREF_SET(__pyx_v_textures, ((PyObject*)__pyx_t_9));
+          __pyx_t_9 = 0;
+
+          /* "TKSFastFunctions.pyx":46
+ *                     spriteSheet=sprite.currentSpriteSheet
+ *                     textures=spriteSheet.textures
+ *                     frameIndex=spriteSheet.frame             # <<<<<<<<<<<<<<
+ *                     displayList.append((textures[frameIndex], (spriteX - cameraLeft, spriteY - cameraTop)))
+ *     return displayList
+*/
+          __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_spriteSheet, __pyx_mstate_global->__pyx_n_u_frame); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 46, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          __pyx_t_10 = __Pyx_PyLong_As_int(__pyx_t_9); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 46, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+          __pyx_v_frameIndex = __pyx_t_10;
+
+          /* "TKSFastFunctions.pyx":47
+ *                     textures=spriteSheet.textures
+ *                     frameIndex=spriteSheet.frame
+ *                     displayList.append((textures[frameIndex], (spriteX - cameraLeft, spriteY - cameraTop)))             # <<<<<<<<<<<<<<
  *     return displayList
  * 
 */
-          __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_sprite, __pyx_mstate_global->__pyx_n_u_image); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 41, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
-          __pyx_t_12 = __Pyx_PyLong_From_int((__pyx_v_spriteX - __pyx_v_cameraLeft)); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 41, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_12);
-          __pyx_t_13 = __Pyx_PyLong_From_int((__pyx_v_spriteY - __pyx_v_cameraTop)); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 41, __pyx_L1_error)
+          if (unlikely(__pyx_v_textures == Py_None)) {
+            PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
+            __PYX_ERR(0, 47, __pyx_L1_error)
+          }
+          __pyx_t_9 = __Pyx_GetItemInt_List(__pyx_v_textures, __pyx_v_frameIndex, int, 1, __Pyx_PyLong_From_int, 1, 1, 1, 1, __Pyx_ReferenceSharing_OwnStrongReference); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 47, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_9);
+          __pyx_t_13 = __Pyx_PyLong_From_int((__pyx_v_spriteX - __pyx_v_cameraLeft)); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 47, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_13);
-          __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 41, __pyx_L1_error)
+          __pyx_t_14 = __Pyx_PyLong_From_int((__pyx_v_spriteY - __pyx_v_cameraTop)); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 47, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_14);
-          __Pyx_GIVEREF(__pyx_t_12);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_12) != (0)) __PYX_ERR(0, 41, __pyx_L1_error);
+          __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 47, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_15);
           __Pyx_GIVEREF(__pyx_t_13);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_14, 1, __pyx_t_13) != (0)) __PYX_ERR(0, 41, __pyx_L1_error);
-          __pyx_t_12 = 0;
-          __pyx_t_13 = 0;
-          __pyx_t_13 = PyTuple_New(2); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 41, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_13);
-          __Pyx_GIVEREF(__pyx_t_8);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_8) != (0)) __PYX_ERR(0, 41, __pyx_L1_error);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_15, 0, __pyx_t_13) != (0)) __PYX_ERR(0, 47, __pyx_L1_error);
           __Pyx_GIVEREF(__pyx_t_14);
-          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_13, 1, __pyx_t_14) != (0)) __PYX_ERR(0, 41, __pyx_L1_error);
-          __pyx_t_8 = 0;
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_t_14) != (0)) __PYX_ERR(0, 47, __pyx_L1_error);
+          __pyx_t_13 = 0;
           __pyx_t_14 = 0;
-          __pyx_t_15 = __Pyx_PyList_Append(__pyx_v_displayList, __pyx_t_13); if (unlikely(__pyx_t_15 == ((int)-1))) __PYX_ERR(0, 41, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+          __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 47, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_14);
+          __Pyx_GIVEREF(__pyx_t_9);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_9) != (0)) __PYX_ERR(0, 47, __pyx_L1_error);
+          __Pyx_GIVEREF(__pyx_t_15);
+          if (__Pyx_PyTuple_SET_ITEM(__pyx_t_14, 1, __pyx_t_15) != (0)) __PYX_ERR(0, 47, __pyx_L1_error);
+          __pyx_t_9 = 0;
+          __pyx_t_15 = 0;
+          __pyx_t_16 = __Pyx_PyList_Append(__pyx_v_displayList, __pyx_t_14); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 47, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
 
-          /* "TKSFastFunctions.pyx":39
+          /* "TKSFastFunctions.pyx":42
  *                 spriteY=imageRect.y
  *                 #viewport culling check
  *                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and             # <<<<<<<<<<<<<<
  *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
- *                     displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
+ *                     spriteSheet=sprite.currentSpriteSheet
 */
         }
 
-        /* "TKSFastFunctions.pyx":29
+        /* "TKSFastFunctions.pyx":32
  *         for sprite in layer:
  *             #early visibility check optimisation
  *             if(<bool>sprite.visible):             # <<<<<<<<<<<<<<
@@ -2882,20 +2936,12 @@ static PyObject *__pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(CYTHON
       }
     }
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-
-    /* "TKSFastFunctions.pyx":26
- * 
- *     #the main nested loops
- *     for layer in internalLayersReference:             # <<<<<<<<<<<<<<
- *         for sprite in layer:
- *             #early visibility check optimisation
-*/
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "TKSFastFunctions.pyx":42
- *                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
- *                     displayList.append((sprite.image, (spriteX - cameraLeft, spriteY - cameraTop)))
+  /* "TKSFastFunctions.pyx":48
+ *                     frameIndex=spriteSheet.frame
+ *                     displayList.append((textures[frameIndex], (spriteX - cameraLeft, spriteY - cameraTop)))
  *     return displayList             # <<<<<<<<<<<<<<
  * 
  * 
@@ -2908,7 +2954,7 @@ static PyObject *__pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(CYTHON
   /* "TKSFastFunctions.pyx":4
  * 
  * 
- * def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRectReference):             # <<<<<<<<<<<<<<
+ * def fastDisplayListGeneratorLoop(set internalLayersReference, object cameraRectReference):             # <<<<<<<<<<<<<<
  *     #cache the camera positions
  *     cdef int cameraLeft=cameraRectReference.left
 */
@@ -2917,16 +2963,18 @@ static PyObject *__pyx_pf_16TKSFastFunctions_fastDisplayListGeneratorLoop(CYTHON
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_5);
-  __Pyx_XDECREF(__pyx_t_8);
-  __Pyx_XDECREF(__pyx_t_12);
+  __Pyx_XDECREF(__pyx_t_9);
   __Pyx_XDECREF(__pyx_t_13);
   __Pyx_XDECREF(__pyx_t_14);
+  __Pyx_XDECREF(__pyx_t_15);
   __Pyx_AddTraceback("TKSFastFunctions.fastDisplayListGeneratorLoop", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XDECREF(__pyx_v_displayList);
   __Pyx_XDECREF(__pyx_v_layer);
   __Pyx_XDECREF(__pyx_v_sprite);
+  __Pyx_XDECREF(__pyx_v_spriteSheet);
+  __Pyx_XDECREF(__pyx_v_textures);
   __Pyx_XDECREF(__pyx_v_imageRect);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
@@ -3284,7 +3332,7 @@ __Pyx_RefNannySetupContext("PyInit_TKSFastFunctions", 0);
   /* "TKSFastFunctions.pyx":4
  * 
  * 
- * def fastDisplayListGeneratorLoop(object internalLayersReference, object cameraRectReference):             # <<<<<<<<<<<<<<
+ * def fastDisplayListGeneratorLoop(set internalLayersReference, object cameraRectReference):             # <<<<<<<<<<<<<<
  *     #cache the camera positions
  *     cdef int cameraLeft=cameraRectReference.left
 */
@@ -3366,34 +3414,34 @@ static int __Pyx_InitCachedConstants(__pyx_mstatetype *__pyx_mstate) {
 static int __Pyx_InitConstants(__pyx_mstatetype *__pyx_mstate) {
   CYTHON_UNUSED_VAR(__pyx_mstate);
   {
-    const struct { const unsigned int length: 8; } index[] = {{1},{20},{20},{16},{18},{6},{12},{10},{19},{11},{9},{18},{11},{28},{8},{5},{9},{23},{13},{5},{5},{4},{8},{10},{8},{3},{12},{5},{12},{10},{6},{12},{10},{11},{9},{7},{7},{8},{3},{6},{7},{1},{1},{179}};
-    #if (CYTHON_COMPRESS_STRINGS) == 2 /* compression: bz2 (505 bytes) */
-const char* const cstring = "BZh91AY&SY\244\241\363o\000\000(\177\377\357l\356\376\241? )\265\275\177\340\277\357\377\340@@@@@@@@@@@@@\000@\0000\001z@\204S\3210\251\236\251\342\207\244\320zj6\246\200\017P\320\003\324\0001\032=ODf\231\225\016\014\203F\2002i\210i\240\3101\014 h\r\030\230\215\000\000\r\023I\204\232bi\204#$dz\206\000\004a\000a\000i\262h\315\022\206{\206?\371\3263\230h\321\342\226rx\211\035-s\243\201\230\031l\210\022\243\320\363@\245\031\250\010\2428'\030 y\326\254CN\255\227\246\376\257Q\272\200)\215\262\272\313\237+\237\324\005\252\252\366\014)JBxm4\343\250B\263D\245\363\006v\314cD\241\370-k\344\254\360e\260\215\010\204\346\311\204\345(\220p\022\333B\301\241\2216\220X\262\222W\235E\021\n?b'\245\362\355\277r\\\316]\210\305\246\032^0s\333\373\262\023`m~\277:\014\306\005\253$\332\013\300\263\030\202p\346:\221\212\022\013\250aa\242\206\225\301\222+p\030*n\nJBv9f\016s\216\030Js\t}\364P,\002\204\351}\213\3029\231\201\214Y\314#\272\020\001\321\022@\036\271\232\346\212\224\032\020\334\014]\234\224-.]q\000\220K\214J\032S\t\014\211C\002*2\0172K\004J\013\007\257\246\371\024\266\204\224\302)\341\371\225I1\206j\303\030\030f\036j\326\324E8\2123\215\225\007\024D\270\216\030n\333-,\351a(\331\004\003\356F\374 \370[\242\250\002\010\232\350\367\271\345t\262mQ _\220\026K\337r\204\321\250\037\301.:dg&,s\344\243\02178m\242+\324\364\321j\tl\313\027]\321_\342\327\304,a\316 C\031\263\037\374]\311\024\341BB\222\207\315\274";
-    PyObject *data = __Pyx_DecompressString(cstring, 505, 2);
+    const struct { const unsigned int length: 8; } index[] = {{1},{179},{20},{8},{20},{16},{18},{6},{12},{10},{19},{11},{9},{18},{18},{11},{28},{5},{10},{8},{9},{23},{13},{5},{5},{4},{8},{10},{8},{3},{12},{5},{12},{10},{6},{12},{10},{11},{11},{9},{7},{7},{8},{8},{3},{6},{7},{1},{1},{203}};
+    #if (CYTHON_COMPRESS_STRINGS) == 2 /* compression: bz2 (712 bytes) */
+const char* const cstring = "BZh91AY&SY\330\370X\330\000\000>\377\377\357l\356\377\361\277$i\277\275\177j\377\377\377\350@@@@@@@@@@@@@\000@\000@\002\035\026\224\253\010\251\354\246J=O\322jz\236\246\231\007\244hdzCM\031\032\001\2104\0000\206\004\365\036\202l\240\324\322\217\023M\032\231=I\26452\000\000\003@\000\000\000\000\000\032\000\340\000h44\032\0004\31042\006\232\000\0002\0002\003 \000\323SBd)\352\236\321\244\364OMP4\001\243M\014\010\320\000\000\006F\201\215\023\323SK\037\342\034\030\3707\231\224\177\210\210\343j\276\216\034\202\344i\313}b\t\003\212`\345\003\001\343\211P\"c\010\nD 3mG\020\261}\331\356\320\263~r\230\t[jcP0\245$(B\313\307\006\364\315{\204fn\347M\366\337\220\3131\006S\007M*:$\242\364\225)2.C\315oI\242\256\005\010N\2736\001\345\216\260jK\233\335\346\222\014\306\226Y\214\363\021U\003\001@\344\224\036c\002\021\000\276\241\202\317\214$\030\034\022\3749d,?\266F\230\207\002\336\263\021%\033\254\302\023\1773 ~\227\333,\215CJ\016\033t\352\346\214\351EJ[\211\t7\225\250\226H\305\200\311\311\215\302\027\212eR\005DO\222\262\240\004\240C\354\347\225o\302\342\315,\372\326\313\254\244\352\024J\325%\304\230\305\234T\272p\352H\204l\017\213\346\020Q\272V\0100\311h\3528\322,sD-r\\\031\230\337r\275\367\264\2011NL\366Z\217M\020FrMG\264b\230\237\003\314;\323\003JR3\253&\254\023l\304 \007\023\307\\\004\030'5T\324\225\007%\215Z3CB\017;\225K\034\214\213\256\311\t\006\026\010\340\226\242\362\033\202\023\207:\220l\202\245\255J\252\354D\274^\023\3427\367\205\354\321\032\n\223X\272R\322\201\243=\265)AG(09\363\206RK\3160\010\013\010=u\235P\034F\372\0172\242\004\020\004\322 \223\254\320\330=@\217y0B\272%\222\201\325\303A\275\211\317\251\255P\263\000\014Y$\031pFp+\273|Add\010\214\251\257\035\rk_i\2471ws\177\030\025-\263a\300\021D\370\222\203+\311F\201\021\261\342\312`\003\"$0\276u\342\245>\365|\253\027n\346\n\201\363P1\r\233Ar\025\351\321W\010\337v\336\241\327i\374{oA\203\r|Fu\351\362\325\303O\373\026\3257.\312\273\261&\265\030\037\270\373\374f\2022\020t(\240\030\220t#\374]\311\024\341BCc\341c`";
+    PyObject *data = __Pyx_DecompressString(cstring, 712, 2);
     if (unlikely(!data)) __PYX_ERR(0, 1, __pyx_L1_error)
     const char* const bytes = __Pyx_PyBytes_AsString(data);
     #if !CYTHON_ASSUME_SAFE_MACROS
     if (likely(bytes)); else { Py_DECREF(data); __PYX_ERR(0, 1, __pyx_L1_error) }
     #endif
-    #elif (CYTHON_COMPRESS_STRINGS) != 0 /* compression: zlib (452 bytes) */
-const char* const cstring = "x\332]P\277O\0331\024\006\365@\215\210\324C\245\"\204T\210\245RKA\312\210\220\250\202\020U\333S\305\257\2260Y\216\363\216Z\370\354\253\355Ks[\307\214\031o\364xcF\306\214\2147z\314\237\300\237P\037\027\321\252\036\336\373\336\317\357{\376p\371\345\342\004+}\222p\242\251\340j/N\207\010\235:s\232\036S\242\321W\030\352s\010\377\357\303*\345\204\212=\"\244H4\345\240zBk\021\021\034\201\304G\377\340\000B]\241s \345*\220\300\t\314S\364\346\307\274z)b\302\334\"D9\322\022\023\350ar\333\247*f8\r\250\322\241\243?\376\033~\004\356\206\264\220\201\0201B\241\023\206\020\215\360\r<\232\222\213r\r\222c\026\340\024\244zbFT\241'\331TC\244X\331\300\234N\204\"\354\350\335\213D?aP\"\356\324!\024\227$?\023\314\252P\226\272\021R\240\347u\207\372\020\342\204i\025K\267\264\262\325?T\270\374\207\n=\036]Awt\005\272\225\273F\310\315\272\315Z\304\003\314\022P\003\252h\217\3010\375\2758\363\032Ec'o[o\243\330x\237w\254\267^\254\277\313\267\255\327,\232\273\371\331\303\362\302\322f\266\375\320ZX\252\215j\343U\373\274>\372<\306\263\372\213\321`\374=k\317\374f\366\306,Z\1773\3337\035\353\267\262O\346\314\272\344[\323\266\376\353\354\332`\3537\262\232Y\235\273\231\2776\016\3143s\220\367';w\027\323\372}\307\276\332\312\224\331\315\365\344p\372r\332\261k[\331/\323\313\227s:\031\336\311i\353\276[|\273*\256\272\326[\031\265\377\000\227+\362\363";
-    PyObject *data = __Pyx_DecompressString(cstring, 452, 1);
+    #elif (CYTHON_COMPRESS_STRINGS) != 0 /* compression: zlib (622 bytes) */
+const char* const cstring = "x\332]Q\317O\023A\024\246\261\020\210$\226\210\341\267\014\036$\2124i\302Ac\242\251\"\006m\010P4\022C\306\351\356[::\235Ygfk7^<\366\330\343\036\367\270\307\0369\366\310\261\307=\366O\340O\360-\333\010q\223}\357\233\231\357\275\371\2767\257\017\224\005b\233\314\222\267\241m*I\270!.\010\336\000\315,\210\220\030\253\271cAg$I\016\337\035n\357<\337!L\272D\303wp\254!&h8\202\031\003\206(\2174\002.,\227\304\206>\2302\331\367H\250\002\"\001\\b\025\361\221w\273\3006A\022\0036\003d\223I\251,\263\\I\212\345\\\236o\022\227k\274\204\267!\253\336c\302@\371\344c}\217\031\273\027H'\243\232\262\037v\230\353R\254\005J\017\303\016\376\273\250\231\036@\307\036\203\367?\237\231P:\\\225\035\245U\200R\3014\224\265\252\345\260\026\232~s\013\327\300\2639:F\021\330\n4H\007\306[\374\2749>=Q\276#\260\021\345(\\3\007\032\314\371\341\004\032\331\266\356kn\241\336\004\260.7\276`a\215\033\353\241\240\335\233\345{\220\331\274\225\256)\345{\032\233^\207}\351B\207R\017\225S\312[\354\0342\035\\\342sH&j,\004m\376\251\242\334\320\177\226\360\312\226\021\031A\240\007J[\014\245\341\327Rn  C\022\373S\352+\237\322\237\001\023\371Rg\236(\305\007\031\237#r\301c\201\260\346\332G\036\363\031\3458\233Q\216\256\007bn\354\346\020g\223\203/y:\245\024\333\330,vl\240\021*\277\315D\000\246\315\ro\010\350\204\177\n\243\342\342pq+\251\244\305\245\341\322\263\244\232\026\027\206\013O\223\215\264\270<\\\336N\216\256\246&&W\242\215\253G\023\2233\335\231\336\\:=\333\375\320c\243\331{\335v\357sT\031\225\226\243\307q!-\255D/\342jZZ\215\366\343\243\0247\237\304\225\264\264\026\235\306,--F3\361\3348\215J\363\275Z|'~\231\270\375\255\213\372`\366\262\232>X\217L\274\235\330\376\253\301\375A5\235'\361\024\226\315\257E_\223B:\277\036\375F=\230~\305\215d\272_\350?\274\350\014\364\345\352\360\323\331\360\214\016\351\267\264x\267[\371\013h!T:";
+    PyObject *data = __Pyx_DecompressString(cstring, 622, 1);
     if (unlikely(!data)) __PYX_ERR(0, 1, __pyx_L1_error)
     const char* const bytes = __Pyx_PyBytes_AsString(data);
     #if !CYTHON_ASSUME_SAFE_MACROS
     if (likely(bytes)); else { Py_DECREF(data); __PYX_ERR(0, 1, __pyx_L1_error) }
     #endif
-    #else /* compression: none (606 bytes) */
-const char* const bytes = "?TKSFastFunctions.pyx__Pyx_PyDict_NextRefTKSFastFunctionsasyncio.coroutinesbottomcameraBottomcameraLeftcameraRectReferencecameraRightcameraTopcline_in_tracebackdisplayListfastDisplayListGeneratorLoop__func__imageimageRectinternalLayersReference_is_coroutineitemslayerleft__main____module____name__pop__qualname__right__set_name__setdefaultspritespriteBottomspriteLeftspriteRightspriteTopspriteXspriteY__test__topvaluesvisiblexy\200\001\340\004\030\320\030+\2501\330\004\031\320\031,\250A\330\004\027\320\027*\250!\330\004\032\320\032-\250Q\360\006\000\005\033\230!\360\034\000\005\t\210\t\220\021\330\010\014\210J\220a\340\014\017\210v\220V\2301\340\020\032\230&\240\001\330\020\033\2309\240A\330\020\034\230I\240Q\330\020\032\230)\2401\330\020\035\230Y\240a\330\020\030\230\t\240\021\330\020\030\230\t\240\021\340\020\024\220L\240\003\240;\250d\260+\270S\300\014\310A\330\025\037\230s\240-\250t\260>\300\023\300A\330\024\037\230w\240b\250\006\250i\260x\270r\300\034\310X\320UW\320WX\330\004\013\2101";
+    #else /* compression: none (864 bytes) */
+const char* const bytes = "?Note that Cython is deliberately stricter than PEP-484 and rejects subclasses of builtin types. If you need to pass subclasses then set the 'annotation_typing' directive to False.TKSFastFunctions.pyxadd_note__Pyx_PyDict_NextRefTKSFastFunctionsasyncio.coroutinesbottomcameraBottomcameraLeftcameraRectReferencecameraRightcameraTopcline_in_tracebackcurrentSpriteSheetdisplayListfastDisplayListGeneratorLoopframeframeIndex__func__imageRectinternalLayersReference_is_coroutineitemslayerleft__main____module____name__pop__qualname__right__set_name__setdefaultspritespriteBottomspriteLeftspriteRightspriteSheetspriteTopspriteXspriteY__test__texturestopvaluesvisiblexy\200\001\340\004\030\320\030+\2501\330\004\031\320\031,\250A\330\004\027\320\027*\250!\330\004\032\320\032-\250Q\360\006\000\005\033\230!\360\"\000\005\t\210\t\220\021\330\010\014\210J\220a\340\014\017\210v\220V\2301\340\020\032\230&\240\001\330\020\033\2309\240A\330\020\034\230I\240Q\330\020\032\230)\2401\330\020\035\230Y\240a\330\020\030\230\t\240\021\330\020\030\230\t\240\021\340\020\024\220L\240\003\240;\250d\260+\270S\300\014\310A\330\025\037\230s\240-\250t\260>\300\023\300A\330\024 \240\006\240a\330\024\035\230[\250\001\330\024\037\230{\250!\330\024\037\230w\240b\250\010\260\001\260\036\270x\300r\310\034\320U]\320]_\320_`\330\004\013\2101";
     PyObject *data = NULL;
     CYTHON_UNUSED_VAR(__Pyx_DecompressString);
     #endif
     PyObject **stringtab = __pyx_mstate->__pyx_string_tab;
     Py_ssize_t pos = 0;
-    for (int i = 0; i < 43; i++) {
+    for (int i = 0; i < 49; i++) {
       Py_ssize_t bytes_length = index[i].length;
       PyObject *string = PyUnicode_DecodeUTF8(bytes + pos, bytes_length, NULL);
-      if (likely(string) && i >= 2) PyUnicode_InternInPlace(&string);
+      if (likely(string) && i >= 4) PyUnicode_InternInPlace(&string);
       if (unlikely(!string)) {
         Py_XDECREF(data);
         __PYX_ERR(0, 1, __pyx_L1_error)
@@ -3401,7 +3449,7 @@ const char* const bytes = "?TKSFastFunctions.pyx__Pyx_PyDict_NextRefTKSFastFunct
       stringtab[i] = string;
       pos += bytes_length;
     }
-    for (int i = 43; i < 44; i++) {
+    for (int i = 49; i < 50; i++) {
       Py_ssize_t bytes_length = index[i].length;
       PyObject *string = PyBytes_FromStringAndSize(bytes + pos, bytes_length);
       stringtab[i] = string;
@@ -3412,14 +3460,14 @@ const char* const bytes = "?TKSFastFunctions.pyx__Pyx_PyDict_NextRefTKSFastFunct
       }
     }
     Py_XDECREF(data);
-    for (Py_ssize_t i = 0; i < 44; i++) {
+    for (Py_ssize_t i = 0; i < 50; i++) {
       if (unlikely(PyObject_Hash(stringtab[i]) == -1)) {
         __PYX_ERR(0, 1, __pyx_L1_error)
       }
     }
     #if CYTHON_IMMORTAL_CONSTANTS
     {
-      PyObject **table = stringtab + 43;
+      PyObject **table = stringtab + 49;
       for (Py_ssize_t i=0; i<1; ++i) {
         #if CYTHON_COMPILING_IN_CPYTHON_FREETHREADING
         Py_SET_REFCNT(table[i], _Py_IMMORTAL_REFCNT_LOCAL);
@@ -3458,8 +3506,8 @@ static int __Pyx_CreateCodeObjects(__pyx_mstatetype *__pyx_mstate) {
   PyObject* tuple_dedup_map = PyDict_New();
   if (unlikely(!tuple_dedup_map)) return -1;
   {
-    const __Pyx_PyCode_New_function_description descr = {2, 0, 0, 16, (unsigned int)(CO_OPTIMIZED|CO_NEWLOCALS), 4};
-    PyObject* const varnames[] = {__pyx_mstate->__pyx_n_u_internalLayersReference, __pyx_mstate->__pyx_n_u_cameraRectReference, __pyx_mstate->__pyx_n_u_cameraLeft, __pyx_mstate->__pyx_n_u_cameraRight, __pyx_mstate->__pyx_n_u_cameraTop, __pyx_mstate->__pyx_n_u_cameraBottom, __pyx_mstate->__pyx_n_u_displayList, __pyx_mstate->__pyx_n_u_layer, __pyx_mstate->__pyx_n_u_sprite, __pyx_mstate->__pyx_n_u_imageRect, __pyx_mstate->__pyx_n_u_spriteLeft, __pyx_mstate->__pyx_n_u_spriteRight, __pyx_mstate->__pyx_n_u_spriteTop, __pyx_mstate->__pyx_n_u_spriteBottom, __pyx_mstate->__pyx_n_u_spriteX, __pyx_mstate->__pyx_n_u_spriteY};
+    const __Pyx_PyCode_New_function_description descr = {2, 0, 0, 19, (unsigned int)(CO_OPTIMIZED|CO_NEWLOCALS), 4};
+    PyObject* const varnames[] = {__pyx_mstate->__pyx_n_u_internalLayersReference, __pyx_mstate->__pyx_n_u_cameraRectReference, __pyx_mstate->__pyx_n_u_cameraLeft, __pyx_mstate->__pyx_n_u_cameraRight, __pyx_mstate->__pyx_n_u_cameraTop, __pyx_mstate->__pyx_n_u_cameraBottom, __pyx_mstate->__pyx_n_u_displayList, __pyx_mstate->__pyx_n_u_layer, __pyx_mstate->__pyx_n_u_sprite, __pyx_mstate->__pyx_n_u_spriteSheet, __pyx_mstate->__pyx_n_u_textures, __pyx_mstate->__pyx_n_u_imageRect, __pyx_mstate->__pyx_n_u_frameIndex, __pyx_mstate->__pyx_n_u_spriteLeft, __pyx_mstate->__pyx_n_u_spriteRight, __pyx_mstate->__pyx_n_u_spriteTop, __pyx_mstate->__pyx_n_u_spriteBottom, __pyx_mstate->__pyx_n_u_spriteX, __pyx_mstate->__pyx_n_u_spriteY};
     __pyx_mstate_global->__pyx_codeobj_tab[0] = __Pyx_PyCode_New(descr, varnames, __pyx_mstate->__pyx_kp_u_TKSFastFunctions_pyx, __pyx_mstate->__pyx_n_u_fastDisplayListGeneratorLoop, __pyx_mstate->__pyx_kp_b_iso88591_1_A_Q_Ja_vV1_9A_IQ_1_Ya_L_d_S_A, tuple_dedup_map); if (unlikely(!__pyx_mstate_global->__pyx_codeobj_tab[0])) goto bad;
   }
   Py_DECREF(tuple_dedup_map);
@@ -4578,13 +4626,50 @@ static void __Pyx_RaiseArgtupleInvalid(
                  (num_expected == 1) ? "" : "s", num_found);
 }
 
-/* RaiseUnexpectedTypeError */
-static int
-__Pyx_RaiseUnexpectedTypeError(const char *expected, PyObject *obj)
+/* ArgTypeTestFunc (used by ArgTypeTest) */
+static int __Pyx__ArgTypeTest(PyObject *obj, PyTypeObject *type, const char *name, int exact)
 {
-    __Pyx_TypeName obj_type_name = __Pyx_PyType_GetFullyQualifiedName(Py_TYPE(obj));
-    PyErr_Format(PyExc_TypeError, "Expected %s, got " __Pyx_FMT_TYPENAME,
-                 expected, obj_type_name);
+    __Pyx_TypeName type_name;
+    __Pyx_TypeName obj_type_name;
+    PyObject *extra_info = __pyx_mstate_global->__pyx_empty_unicode;
+    int from_annotation_subclass = 0;
+    if (unlikely(!type)) {
+        PyErr_SetString(PyExc_SystemError, "Missing type object");
+        return 0;
+    }
+    else if (!exact) {
+        if (likely(__Pyx_TypeCheck(obj, type))) return 1;
+    } else if (exact == 2) {
+        if (__Pyx_TypeCheck(obj, type)) {
+            from_annotation_subclass = 1;
+            extra_info = __pyx_mstate_global->__pyx_kp_u_Note_that_Cython_is_deliberately;
+        }
+    }
+    type_name = __Pyx_PyType_GetFullyQualifiedName(type);
+    obj_type_name = __Pyx_PyType_GetFullyQualifiedName(Py_TYPE(obj));
+    PyErr_Format(PyExc_TypeError,
+        "Argument '%.200s' has incorrect type (expected " __Pyx_FMT_TYPENAME
+        ", got " __Pyx_FMT_TYPENAME ")"
+#if __PYX_LIMITED_VERSION_HEX < 0x030C0000
+        "%s%U"
+#endif
+        , name, type_name, obj_type_name
+#if __PYX_LIMITED_VERSION_HEX < 0x030C0000
+        , (from_annotation_subclass ? ". " : ""), extra_info
+#endif
+        );
+#if __PYX_LIMITED_VERSION_HEX >= 0x030C0000
+    if (exact == 2 && from_annotation_subclass) {
+        PyObject *res;
+        PyObject *vargs[2];
+        vargs[0] = PyErr_GetRaisedException();
+        vargs[1] = extra_info;
+        res = PyObject_VectorcallMethod(__pyx_mstate_global->__pyx_kp_u_add_note, vargs, 2, NULL);
+        Py_XDECREF(res);
+        PyErr_SetRaisedException(vargs[0]);
+    }
+#endif
+    __Pyx_DECREF_TypeName(type_name);
     __Pyx_DECREF_TypeName(obj_type_name);
     return 0;
 }
@@ -4712,6 +4797,120 @@ static CYTHON_INLINE int __Pyx_set_iter_next(
     }
 #endif
     return 0;
+}
+
+/* RaiseUnexpectedTypeError */
+static int
+__Pyx_RaiseUnexpectedTypeError(const char *expected, PyObject *obj)
+{
+    __Pyx_TypeName obj_type_name = __Pyx_PyType_GetFullyQualifiedName(Py_TYPE(obj));
+    PyErr_Format(PyExc_TypeError, "Expected %s, got " __Pyx_FMT_TYPENAME,
+                 expected, obj_type_name);
+    __Pyx_DECREF_TypeName(obj_type_name);
+    return 0;
+}
+
+/* GetItemInt */
+static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
+    PyObject *r;
+    if (unlikely(!j)) return NULL;
+    r = PyObject_GetItem(o, j);
+    Py_DECREF(j);
+    return r;
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck, int unsafe_shared) {
+    CYTHON_MAYBE_UNUSED_VAR(unsafe_shared);
+#if CYTHON_ASSUME_SAFE_SIZE
+    Py_ssize_t wrapped_i = i;
+    if (wraparound & unlikely(i < 0)) {
+        wrapped_i += PyList_GET_SIZE(o);
+    }
+    if ((CYTHON_AVOID_BORROWED_REFS || CYTHON_AVOID_THREAD_UNSAFE_BORROWED_REFS || !CYTHON_ASSUME_SAFE_MACROS)) {
+        return __Pyx_PyList_GetItemRefFast(o, wrapped_i, unsafe_shared);
+    } else
+    if ((!boundscheck) || likely(__Pyx_is_valid_index(wrapped_i, PyList_GET_SIZE(o)))) {
+        return __Pyx_NewRef(PyList_GET_ITEM(o, wrapped_i));
+    }
+    return __Pyx_GetItemInt_Generic(o, PyLong_FromSsize_t(i));
+#else
+    (void)wraparound;
+    (void)boundscheck;
+    return PySequence_GetItem(o, i);
+#endif
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck, int unsafe_shared) {
+    CYTHON_MAYBE_UNUSED_VAR(unsafe_shared);
+#if CYTHON_ASSUME_SAFE_SIZE && CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+    Py_ssize_t wrapped_i = i;
+    if (wraparound & unlikely(i < 0)) {
+        wrapped_i += PyTuple_GET_SIZE(o);
+    }
+    if ((!boundscheck) || likely(__Pyx_is_valid_index(wrapped_i, PyTuple_GET_SIZE(o)))) {
+        return __Pyx_NewRef(PyTuple_GET_ITEM(o, wrapped_i));
+    }
+    return __Pyx_GetItemInt_Generic(o, PyLong_FromSsize_t(i));
+#else
+    (void)wraparound;
+    (void)boundscheck;
+    return PySequence_GetItem(o, i);
+#endif
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, int is_list,
+                                                     int wraparound, int boundscheck, int unsafe_shared) {
+    CYTHON_MAYBE_UNUSED_VAR(unsafe_shared);
+#if CYTHON_ASSUME_SAFE_MACROS && CYTHON_ASSUME_SAFE_SIZE
+    if (is_list || PyList_CheckExact(o)) {
+        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyList_GET_SIZE(o);
+        if ((CYTHON_AVOID_BORROWED_REFS || CYTHON_AVOID_THREAD_UNSAFE_BORROWED_REFS)) {
+            return __Pyx_PyList_GetItemRefFast(o, n, unsafe_shared);
+        } else if ((!boundscheck) || (likely(__Pyx_is_valid_index(n, PyList_GET_SIZE(o))))) {
+            return __Pyx_NewRef(PyList_GET_ITEM(o, n));
+        }
+    } else
+    #if !CYTHON_AVOID_BORROWED_REFS
+    if (PyTuple_CheckExact(o)) {
+        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyTuple_GET_SIZE(o);
+        if ((!boundscheck) || likely(__Pyx_is_valid_index(n, PyTuple_GET_SIZE(o)))) {
+            return __Pyx_NewRef(PyTuple_GET_ITEM(o, n));
+        }
+    } else
+    #endif
+#endif
+#if CYTHON_USE_TYPE_SLOTS && !CYTHON_COMPILING_IN_PYPY
+    {
+        PyMappingMethods *mm = Py_TYPE(o)->tp_as_mapping;
+        PySequenceMethods *sm = Py_TYPE(o)->tp_as_sequence;
+        if (!is_list && mm && mm->mp_subscript) {
+            PyObject *r, *key = PyLong_FromSsize_t(i);
+            if (unlikely(!key)) return NULL;
+            r = mm->mp_subscript(o, key);
+            Py_DECREF(key);
+            return r;
+        }
+        if (is_list || likely(sm && sm->sq_item)) {
+            if (wraparound && unlikely(i < 0) && likely(sm->sq_length)) {
+                Py_ssize_t l = sm->sq_length(o);
+                if (likely(l >= 0)) {
+                    i += l;
+                } else {
+                    if (!PyErr_ExceptionMatches(PyExc_OverflowError))
+                        return NULL;
+                    PyErr_Clear();
+                }
+            }
+            return sm->sq_item(o, i);
+        }
+    }
+#else
+    if (is_list || !PyMapping_Check(o)) {
+        return PySequence_GetItem(o, i);
+    }
+#endif
+    (void)wraparound;
+    (void)boundscheck;
+    return __Pyx_GetItemInt_Generic(o, PyLong_FromSsize_t(i));
 }
 
 /* dict_setdefault (used by FetchCommonType) */
