@@ -1,44 +1,69 @@
 import TKS
 import pygame
+import tks
+from fastFunctions.TKSFastCode import SpriteRenderData,ImageSize,SpriteSheetData
 
 
-
+            
 
 class SpriteSheet:
     def __init__(self,textureSurfaces:list[pygame.Surface,]|pygame.Surface,frameRate:int=0,startFrame:int=0,playOnCreation:bool=False,looping:bool=False) -> None:
         #config variables
+        #init config vals:
         self.looping:bool=looping
-        self.frame:int=startFrame
         self.startFrame:int=startFrame
+        #init surfaces and sizes
+        self.renderingData=SpriteSheetData()
         if(type(textureSurfaces)==list):
-            self.textures:list[pygame.Surface]=textureSurfaces
+            for frame in textureSurfaces:
+                frameRect:pygame.Rect=frame.get_rect()
+                self.renderingData.addFrame(frame,frameRect.width,frameRect.height)
         elif(type(textureSurfaces)==pygame.Surface):
-            self.textures:list[pygame.Surface]=[textureSurfaces]
-        self.animationLen=len(self.textures)
+            frameRect:pygame.Rect=textureSurfaces.get_rect()
+            self.renderingData.addFrame(textureSurfaces,frameRect.width,frameRect.height)
+        #config runtime vars
+        self.renderingData.frame=startFrame
+        self.animationLen=len(self.renderingData.frameList)
         self.frameTimeCarry:float=0
         self.frameRate:int=frameRate
+        #config framerate delay
         if(self.frameRate>0):
             self.frameRateDelay:float=1/self.frameRate
         else:
             self.frameRateDelay:float=0
+        
+        #init pause variable
         self.unpaused:bool=playOnCreation
+        #the sizes of every image and the current frame, in cython for speed
+        
 
-    def getImageRect(self):
-        return self.textures[self.frame].get_rect().copy()
+            
+
 
     def frameUpdate(self,frameTime:float):
+        #if currently playing
         if(self.unpaused):
-            if((self.frameRate!=0)and((self.frame<self.animationLen-1) or self.looping)):
+            #if nothing should stop a frame advance
+            if((self.frameRate!=0)and((self.renderingData.frame<self.animationLen-1) or self.looping)):
+                #calculate how long it has been since we last did this
                 adjustedFrameTime=frameTime+self.frameTimeCarry
+                #figure out how many frames we should advance from that
                 passedFrames=int(adjustedFrameTime//self.frameRateDelay)
+                #save any excess
                 self.frameTimeCarry=adjustedFrameTime%self.frameRateDelay
-                prospectiveNewFrame=self.frame+passedFrames
+                #store how many frames we think we should advance
+                prospectiveNewFrame=self.renderingData.frame+passedFrames
+                #if the new frame is less than the animation length
                 if(prospectiveNewFrame<self.animationLen):
-                    self.frame=prospectiveNewFrame
+                    #thats our new frame
+                    self.renderingData.frame=prospectiveNewFrame
+                #instead if we are looping
                 elif(self.looping):
-                    self.frame=prospectiveNewFrame%self.animationLen
+                    #loop over to the new frame
+                    self.renderingData.frame=prospectiveNewFrame%self.animationLen
+                #otherwise just rebound the final frame
                 else:
-                    self.frame=self.animationLen-1
+                    self.renderingData.frame=self.animationLen-1
 
     def pause(self):
         self.unpaused=False
@@ -49,15 +74,13 @@ class SpriteSheet:
     def setFrame(self,frameIndex:int):
         if((frameIndex<0)or(frameIndex>=self.animationLen)):
             raise ValueError("setFrame error: frame index must be greater than zero and less than or equal to the number of frames of the animation.\nanimation max index: "+str(self.animationLen-1)+" received index: "+str(frameIndex))
-        self.frame=frameIndex
+        self.renderingData.frame=frameIndex
 
     def resetAnimation(self):
-        self.frame=self.startFrame
+        self.renderingData.frame=self.startFrame
 
     def getCurrentFrame(self):
-        return self.textures[self.frame]
-            
-
+        return self.renderingData.frameList[self.renderingData.frame]
             
 
 
@@ -71,17 +94,16 @@ class SpriteSheet:
 
 class BasicSprite(pygame.sprite.Sprite):
     def __init__(self,x:int,y:int,width:int,height:int,image:pygame.Surface) -> None:
-        super().__init__()
+
         #init texture
         self.currentSpriteSheet:SpriteSheet=SpriteSheet(image)
         #init rects
         self.rect:pygame.Rect=pygame.Rect(x,y,width,height)
-        self.imageRect:pygame.Rect=self.currentSpriteSheet.getImageRect()
         #init visibility
         self.visible=True
         #init image pos
-        self.imageRect.x=self.rect.x
-        self.imageRect.y=self.rect.y
+        self.imageX=self.rect.x
+        self.imageY=self.rect.y
         #init image offset
         self.imageOffsetX=0
         self.imageOffsetY=0
@@ -99,28 +121,27 @@ class BasicSprite(pygame.sprite.Sprite):
 
     def changeTexture(self, newTexture:pygame.Surface):
         self.currentSpriteSheet=SpriteSheet(newTexture)
-        self.imageRect=self.currentSpriteSheet.getImageRect()
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.imageOffsetX
+        self.imageY=self.rect.y+self.imageOffsetY
 
     def setPos(self,x:int,y:int):
         self.rect.x=x
         self.rect.y=y
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.imageOffsetX
+        self.imageY=self.rect.y+self.imageOffsetY
 
 
     def move(self,x:int,y:int):
        self.rect.x+=x
        self.rect.y+=y
-       self.imageRect.x=self.rect.x+self.imageOffsetX
-       self.imageRect.y=self.rect.y+self.imageOffsetY
+       self.imageX=self.rect.x+self.imageOffsetX
+       self.imageY=self.rect.y+self.imageOffsetY
 
     def setTextureOffset(self,x:int,y:int):
         self.imageOffsetX=x
         self.imageOffsetY=y
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.imageOffsetX
+        self.ImageY=self.rect.y+self.imageOffsetY
 
     def frameTick(self,frameTime:float):
         pass
@@ -154,8 +175,8 @@ class BasicTileSprite(BasicSprite):
         self.tileY+=y
         self.rect.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.imageOffsetX
+        self.imageY=self.rect.y+self.imageOffsetY
 
         
     def setPos(self, x:int, y:int):
@@ -171,8 +192,8 @@ class BasicTileSprite(BasicSprite):
         self.tileY=y
         self.rect.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.imageOffsetX
+        self.imageY=self.rect.y+self.imageOffsetY
         
     def getTileOffset(self):
         return (self.tileOffsetX,self.tileOffsetY)
@@ -182,5 +203,5 @@ class BasicTileSprite(BasicSprite):
         self.tileOffsetY=y
         self.rect.x=(self.tileSize*self.tileX)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageRect.x=self.rect.x+self.imageOffsetX
-        self.imageRect.y=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.imageOffsetX
+        self.imageY=self.rect.y+self.imageOffsetY

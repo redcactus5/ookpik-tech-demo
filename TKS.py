@@ -6,7 +6,7 @@ the 10,000 sprites engine
 import threading
 import pygame
 import pygame_gui
-from fastFunctions.TKSFastFunctions import fastDisplayListGeneratorLoop
+from fastFunctions.TKSFastCode import fastDisplayListGeneratorLoop
 import TKSWorkerThreads
 import TKSSprites
 #TKS engine
