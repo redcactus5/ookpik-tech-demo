@@ -23,8 +23,8 @@ class SpriteSheetData:
 class SpriteRenderData:
     imageX: int
     imageY: int
-    offsetX: int
-    offsetY: int
+    imageOffsetX: int
+    imageOffsetY: int
     visible: bool
 
 def fastDisplayListGeneratorLoop(

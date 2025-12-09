@@ -33,9 +33,16 @@ cdef class SpriteSheetData:
 cdef class SpriteRenderData:
     cdef public int imageX
     cdef public int imageY
-    cdef public int offsetX
-    cdef public int offsetY
+    cdef public int imageOffsetX
+    cdef public int imageOffsetY
     cdef public bint visible
+
+    def __cinit__(self,imageX,imageY,imageOffsetX,imageOffsetY,visible):
+        self.imageX=imageX
+        self.imageY=imageY
+        self.imageOffsetX=imageOffsetX
+        self.imageOffsetY=imageOffsetY
+        self.visible=visible
 
 
 

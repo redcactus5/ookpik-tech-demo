@@ -99,49 +99,55 @@ class BasicSprite(pygame.sprite.Sprite):
         self.currentSpriteSheet:SpriteSheet=SpriteSheet(image)
         #init rects
         self.rect:pygame.Rect=pygame.Rect(x,y,width,height)
+        
+        #init cython data container
+        self.renderData=SpriteRenderData()
         #init visibility
-        self.visible=True
+        self.renderData.visible=True
         #init image pos
-        self.imageX=self.rect.x
-        self.imageY=self.rect.y
+        self.renderData.imageX=self.rect.x
+        self.renderData.imageY=self.rect.y
         #init image offset
-        self.imageOffsetX=0
-        self.imageOffsetY=0
+        self.renderData.imageOffsetX=0
+        self.renderData.imageOffsetY=0
+        
+
+        
         
 
 
     def hide(self):
-        self.visible=False
+        self.renderData.visible=False
 
 
 
     def show(self):
-        self.visible=True
+        self.renderData.visible=True
  
 
     def changeTexture(self, newTexture:pygame.Surface):
         self.currentSpriteSheet=SpriteSheet(newTexture)
-        self.imageX=self.rect.x+self.imageOffsetX
-        self.imageY=self.rect.y+self.imageOffsetY
+        self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
+        self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
 
     def setPos(self,x:int,y:int):
         self.rect.x=x
         self.rect.y=y
-        self.imageX=self.rect.x+self.imageOffsetX
-        self.imageY=self.rect.y+self.imageOffsetY
+        self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
+        self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
 
 
     def move(self,x:int,y:int):
        self.rect.x+=x
        self.rect.y+=y
-       self.imageX=self.rect.x+self.imageOffsetX
-       self.imageY=self.rect.y+self.imageOffsetY
+       self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
+       self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
 
     def setTextureOffset(self,x:int,y:int):
-        self.imageOffsetX=x
-        self.imageOffsetY=y
-        self.imageX=self.rect.x+self.imageOffsetX
-        self.ImageY=self.rect.y+self.imageOffsetY
+        self.renderData.imageOffsetX=x
+        self.renderData.imageY=y
+        self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
+        self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
 
     def frameTick(self,frameTime:float):
         pass
@@ -175,8 +181,8 @@ class BasicTileSprite(BasicSprite):
         self.tileY+=y
         self.rect.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageX=self.rect.x+self.imageOffsetX
-        self.imageY=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.renderData.imageOffsetX
+        self.imageY=self.rect.y+self.renderData.imageOffsetY
 
         
     def setPos(self, x:int, y:int):
@@ -192,8 +198,8 @@ class BasicTileSprite(BasicSprite):
         self.tileY=y
         self.rect.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageX=self.rect.x+self.imageOffsetX
-        self.imageY=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.renderData.imageOffsetX
+        self.imageY=self.rect.y+self.renderData.imageOffsetY
         
     def getTileOffset(self):
         return (self.tileOffsetX,self.tileOffsetY)
@@ -203,5 +209,5 @@ class BasicTileSprite(BasicSprite):
         self.tileOffsetY=y
         self.rect.x=(self.tileSize*self.tileX)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageX=self.rect.x+self.imageOffsetX
-        self.imageY=self.rect.y+self.imageOffsetY
+        self.imageX=self.rect.x+self.renderData.imageOffsetX
+        self.imageY=self.rect.y+self.renderData.imageOffsetY
