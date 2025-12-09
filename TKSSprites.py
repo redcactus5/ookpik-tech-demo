@@ -4,9 +4,9 @@ import tks
 from fastFunctions.TKSFastCode import SpriteRenderData,ImageSize,SpriteSheetData
 
 
-            
-
-class SpriteSheet:
+    
+#need to rework this to work with having a wrapper class that handles most animation state
+class TextureSheet:
     def __init__(self,textureSurfaces:list[pygame.Surface,]|pygame.Surface,frameRate:int=0,startFrame:int=0,playOnCreation:bool=False,looping:bool=False) -> None:
         #config variables
         #init config vals:
@@ -85,18 +85,21 @@ class SpriteSheet:
 
 
 
+class AnimationSet:
+    def __init__(self) -> None:
+        pass
+        #need to populate this and make it use the 
 
 
 
 
 
-
-
+#need to modify this to work with having a wrapper for the animations
 class BasicSprite(pygame.sprite.Sprite):
     def __init__(self,x:int,y:int,width:int,height:int,image:pygame.Surface) -> None:
 
         #init texture
-        self.currentSpriteSheet:SpriteSheet=SpriteSheet(image)
+        self.currentSpriteSheet:TextureSheet=TextureSheet(image)
         #init rects
         self.rect:pygame.Rect=pygame.Rect(x,y,width,height)
         
@@ -126,28 +129,28 @@ class BasicSprite(pygame.sprite.Sprite):
  
 
     def changeTexture(self, newTexture:pygame.Surface):
-        self.currentSpriteSheet=SpriteSheet(newTexture)
-        self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
-        self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
+        self.currentSpriteSheet=TextureSheet(newTexture)
+        self.renderData.imageX=self.rect.x
+        self.renderData.imageY=self.rect.y
 
     def setPos(self,x:int,y:int):
         self.rect.x=x
         self.rect.y=y
-        self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
-        self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
+        self.renderData.imageX=self.rect.x
+        self.renderData.imageY=self.rect.y
 
 
     def move(self,x:int,y:int):
        self.rect.x+=x
        self.rect.y+=y
-       self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
-       self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
+       self.renderData.imageX=self.rect.x
+       self.renderData.imageY=self.rect.y
 
     def setTextureOffset(self,x:int,y:int):
         self.renderData.imageOffsetX=x
         self.renderData.imageY=y
-        self.renderData.imageX=self.rect.x+self.renderData.imageOffsetX
-        self.renderData.imageY=self.rect.y+self.renderData.imageOffsetY
+        self.renderData.imageX=self.rect.x
+        self.renderData.imageY=self.rect.y
 
     def frameTick(self,frameTime:float):
         pass
@@ -181,8 +184,8 @@ class BasicTileSprite(BasicSprite):
         self.tileY+=y
         self.rect.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageX=self.rect.x+self.renderData.imageOffsetX
-        self.imageY=self.rect.y+self.renderData.imageOffsetY
+        self.imageX=self.rect.x
+        self.imageY=self.rect.y
 
         
     def setPos(self, x:int, y:int):
@@ -198,8 +201,8 @@ class BasicTileSprite(BasicSprite):
         self.tileY=y
         self.rect.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageX=self.rect.x+self.renderData.imageOffsetX
-        self.imageY=self.rect.y+self.renderData.imageOffsetY
+        self.imageX=self.rect.x
+        self.imageY=self.rect.y
         
     def getTileOffset(self):
         return (self.tileOffsetX,self.tileOffsetY)
@@ -209,5 +212,5 @@ class BasicTileSprite(BasicSprite):
         self.tileOffsetY=y
         self.rect.x=(self.tileSize*self.tileX)+self.tileOffsetX
         self.rect.y=(self.tileSize*self.tileY)+self.tileOffsetY
-        self.imageX=self.rect.x+self.renderData.imageOffsetX
-        self.imageY=self.rect.y+self.renderData.imageOffsetY
+        self.imageX=self.rect.x
+        self.imageY=self.rect.y

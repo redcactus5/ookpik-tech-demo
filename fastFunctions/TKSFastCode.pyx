@@ -1,16 +1,56 @@
 from libc.stdint cimport int32_t
 
 
-
-cdef class ImageSize:
+cdef class FastRect:
     cdef public int x
     cdef public int y
+    cdef public int width
+    cdef public int height
 
-    def __cinit__(self,x,y):
+    def __cinit__(self,x,y,width,height):
         self.x=x
         self.y=y
+        self.width=width
+        self.height=height
 
-    def __init__(self, x=0, y=0):
+    def __init__(self,x=0,y=0,width=0,height=0) -> None:
+        pass
+
+
+cdef class Camera:
+    cdef public int x
+    cdef public int y
+    cdef public int width
+    cdef public int height
+    def __cinit__(self,x,y,width,height) -> None:
+        self.x=x
+        self.y=y
+        self.width=width
+        self.height=height
+    
+    def __init__(self,x=0,y=0,width=0,height=0) -> None:
+        pass
+
+    def getPos(self):
+        return (self.x, self.y)
+    
+    def setPos(self,x,y):
+        self.x=x
+        self.y=y
+    
+    def move(self,x,y):
+        self.x+=x
+        self.y+=y
+
+cdef class ImageSize:
+    cdef public int width
+    cdef public int height
+
+    def __cinit__(self,width,height):
+        self.width=width
+        self.height=height
+
+    def __init__(self, width=0, height=0):
         pass
 
 
@@ -27,6 +67,16 @@ cdef class SpriteSheetData:
     def addFrame(self, surface, width, height):
         self.frameList.append(surface)
         self.imageSizeList.append(ImageSize(width, height))
+
+cdef class SpriteSetData:
+    cdef public list animations
+    cdef public int currentAnim
+
+    def __cinit__(self, animationDataList,startingAnimation=0):
+        self.currentAnim=startingAnimation
+        self.animations=animationDataList
+            
+            
 
 
 
@@ -46,13 +96,13 @@ cdef class SpriteRenderData:
 
 
 #need to be reworked for new sprite render data system
-def fastDisplayListGeneratorLoop(list internalLayersReference, object cameraRectReference):
+def fastDisplayListGeneratorLoop(list internalLayersReference, Camera cameraReference):
     #cache the camera positions
-    cdef object cameraRect=cameraRectReference
-    cdef int cameraLeft=cameraRect.left
-    cdef int cameraRight=cameraRect.right
-    cdef int cameraTop=cameraRect.top
-    cdef int cameraBottom=cameraRect.bottom
+    cdef Camera camera=cameraReference
+    cdef int cameraLeft=camera.x
+    cdef int cameraRight=camera.x+camera.width
+    cdef int cameraTop=camera.y
+    cdef int cameraBottom=camera.y+camera.height
 
     #cache the reference to internalLayers
     cdef list internalLayers=internalLayersReference
@@ -63,10 +113,10 @@ def fastDisplayListGeneratorLoop(list internalLayersReference, object cameraRect
     cdef object append = displayList.append
     cdef set layer
     cdef object sprite
+    cdef SpriteRenderData SpriteData
     cdef object spriteSheet
-    cdef list[object] textures
-    cdef object imageRect
-    cdef int frameIndex
+    cdef SpriteSheetData sheetData
+    cdef ImageSize frameSize
 
     #variables for the four corners and coords
     cdef int spriteLeft
@@ -79,23 +129,24 @@ def fastDisplayListGeneratorLoop(list internalLayersReference, object cameraRect
     #the main nested loops
     for layer in internalLayersReference:
         for sprite in layer:
+            SpriteData=sprite.renderData
             #early visibility check optimisation
-            if(<bool>sprite.visible):
+            if(SpriteData.visible):
                 #load the sprites
-                imageRect=sprite.imageRect
-                spriteLeft=imageRect.left
-                spriteRight=imageRect.right
-                spriteTop=imageRect.top
-                spriteBottom=imageRect.bottom
-                spriteX=imageRect.x
-                spriteY=imageRect.y
+                spriteSheet=sprite.currentSpriteSheet
+                sheetData=spriteSheet.renderingData
+                frameSize=sheetData.imageSizeList[sheetData.frame]
+                spriteX=SpriteData.imageX+SpriteData.imageOffsetX
+                spriteY=SpriteData.imageY+SpriteData.imageOffsetY
+                spriteLeft=spriteX
+                spriteRight=spriteLeft+frameSize.width
+                spriteTop=spriteY
+                spriteBottom=spriteTop+frameSize.height
+                
                 #viewport culling check
                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
-                    spriteSheet=sprite.currentSpriteSheet
-                    textures=spriteSheet.textures
-                    frameIndex=spriteSheet.frame
-                    append((textures[frameIndex], (spriteX - cameraLeft, spriteY - cameraTop)))
+                    append((sheetData.frameList[sheetData.frame], (spriteX - cameraLeft, spriteY - cameraTop)))
     return displayList
 
 

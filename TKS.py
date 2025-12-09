@@ -7,6 +7,7 @@ import threading
 import pygame
 import pygame_gui
 from fastFunctions.TKSFastCode import fastDisplayListGeneratorLoop
+from fastFunctions.TKSFastCode import Camera
 import TKSWorkerThreads
 import TKSSprites
 #TKS engine
@@ -55,24 +56,6 @@ def getImageSize(image:pygame.Surface):
 
 
 
-#no rotation because this is python, and im not learning how to do it, and it would require cython anyway
-class Camera:
-    def __init__(self,x,y,width,height) -> None:
-        self.viewRect=pygame.Rect(x,y,width,height)
-
-    def getPos(self):
-        return (self.viewRect.x, self.viewRect.y)
-    
-    def setPos(self,x,y):
-        self.viewRect.x=x
-        self.viewRect.y=y
-    
-    def move(self,x,y):
-        self.viewRect.x+=x
-        self.viewRect.y+=y
-
-    def getRect(self):#lol
-        return self.viewRect
 
 
 
@@ -111,7 +94,6 @@ class Renderer:
         self.framebufferAccessLock:threading.Lock=threading.Lock()
         #sprite layer stuff, because everything is a sprite
         self.layerCount:int=layers
-        self.layers:list[pygame.sprite.Group]=[pygame.sprite.Group() for l in range(layers)]
         #speed optimization i didnt want but must have
         self.internalLayers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
         
@@ -220,7 +202,7 @@ class Renderer:
         '''
         if(not self.bufferSwapTrigger.is_set()):
             #use a cython version of the above to increase speed
-            displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera.getRect())
+            displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera)
             self.renderFrameBuffer.fill(self.clearColor,special_flags=pygame.SRCALPHA)
             self.renderFrameBuffer.blits(displayList)
             
@@ -255,14 +237,12 @@ class Renderer:
     def addSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
         #update both the sprite group representation and the set representation, plus the camera, so everything is seamless and doesn't break
         #because of how sprite groups work and my obsession with speed in an inherently slow language
-        self.layers[layer].add(sprite)
         self.internalLayers[layer].add(sprite)
         
 
     def addSprites(self,sprites:list[TKSSprites.BasicSprite],layer:int):
         #update both the sprite group representation and the set representation, plus the camera,
         #for all objects, so everything is seamless and doesn't break
-        self.layers[layer].add(sprites)
         self.internalLayers[layer].update(sprites)
 
 
@@ -295,32 +275,28 @@ class Renderer:
 
 
     def deleteSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
-        if(self.layers[layer].has(sprite)):
-            self.layers[layer].remove(sprite)
+        if(sprite in self.internalLayers[layer]):
             self.internalLayers[layer].remove(sprite)
     
     def deleteSprites(self,spriteList:list[TKSSprites.BasicSprite],layer:int):
         for sprite in spriteList:
-            if(self.layers[layer].has(sprite)):
-                self.layers[layer].remove(sprite)
+            if(sprite in self.internalLayers[layer]):
                 self.internalLayers[layer].remove(sprite)
 
     def deleteSpriteFromAllLayers(self,sprite:TKSSprites.BasicSprite):
-        for layer in range(len(self.layers)):
+        for layer in range(len(self.internalLayers)):
             self.deleteSprite(sprite,layer)
  
     def deleteSpritesFromAllLayers(self,spriteList:list[TKSSprites.BasicSprite]):
-        for layer in range(len(self.layers)):
+        for layer in range(len(self.internalLayers)):
             self.deleteSprites(spriteList,layer)
 
     def clearAllLayers(self):
-        for index,layer in enumerate(self.layers):
-            layer.empty()
+        for index in range(len(self.internalLayers)):
             self.internalLayers[index]=set()
         self.render()
 
     def clearLayer(self,index:int):
-        self.layers[index].empty()
         self.internalLayers[index]=set()
         self.render()
 
