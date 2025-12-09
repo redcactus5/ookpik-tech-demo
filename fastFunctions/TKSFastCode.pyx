@@ -45,7 +45,7 @@ cdef class SpriteRenderData:
         self.visible=visible
 
 
-
+#need to be reworked for new sprite render data system
 def fastDisplayListGeneratorLoop(list internalLayersReference, object cameraRectReference):
     #cache the camera positions
     cdef object cameraRect=cameraRectReference
