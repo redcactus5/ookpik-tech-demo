@@ -147,7 +147,7 @@ cdef class AnimationControllerCore:
         self.prospectiveFrame=0
         self.frameTime=0
         
-    cdef void _fastSwapAnimation(self,int newAnimationIndex):
+    cpdef void swapAnimation(self,int newAnimationIndex):
         #set the new index
         self.currentAnimIndex=newAnimationIndex
         #load the new animation
@@ -168,10 +168,8 @@ cdef class AnimationControllerCore:
         #pause the animation state
         self.unpaused=0
     
-    cpdef swapAnimation(self,int newAnimationIndex):
-        self._fastSwapAnimation(newAnimationIndex)
         
-    cdef void _fastFrameUpdate(self, float frameTime):
+    cpdef void frameUpdate(self, float frameTime):
         if (self.unpaused):
             # Cache the current animation in a local C variable
             cdef Animation anim = self.currentAnimation
@@ -214,8 +212,6 @@ cdef class AnimationControllerCore:
                         self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
                         self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
     
-    cpdef frameUpdate(self, float frameTime):
-        self._fastFrameUpdate(frameTime)
 
     cpdef pause(self):
         self.unpaused=0
@@ -223,13 +219,18 @@ cdef class AnimationControllerCore:
     cpdef play(self):
         self.unpaused=1
 
-    cdef _fastSetFrame(self,int frame):
+    cpdef setFrame(self,int frame):
         if((frame<0)or(frame>self.currentAnimation.lengthMinusOne)):
             raise ValueError("frameset error: given frame index is out of bounds\nvalue must be between 0 and "+str(self.currentAnimation.length)+" given value: "+str(frame))
         self.frame=frame
+        self.frameTimeCarry=0
+        self.lastFrame=frame
 
-    cpdef setFrame(self,int frame):
-        self._fastSetFrame(frame)
+        self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
+        self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
+
+    cpdef resetAnimation(self):
+        self.setFrame(self.currentAnimation.startingFrame)
         
 
 
@@ -257,7 +258,7 @@ cdef class SpriteRenderData:
 
 
 #need to be reworked for new system
-def fastDisplayListGeneratorLoop(list internalLayersReference, Camera cameraReference):
+cpdef list generateDisplayList(list internalLayersReference, Camera cameraReference):
     #cache the camera positions
     cdef Camera camera=cameraReference
     cdef int cameraLeft=camera.x
@@ -309,7 +310,6 @@ def fastDisplayListGeneratorLoop(list internalLayersReference, Camera cameraRefe
                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
                     append((sheetData.frameList[sheetData.frame], (spriteX - cameraLeft, spriteY - cameraTop)))
     return displayList
-
 
 
 
