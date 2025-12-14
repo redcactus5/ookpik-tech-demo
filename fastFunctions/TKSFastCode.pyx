@@ -1,5 +1,6 @@
-from libc.stdint cimport int32_t
+import numpy
 
+cimport cython
 
 cdef class FastRect:
     cdef public int x
@@ -42,6 +43,7 @@ cdef class Camera:
         self.x+=x
         self.y+=y
 
+
 cdef class ImageSize:
     cdef public int width
     cdef public int height
@@ -52,7 +54,6 @@ cdef class ImageSize:
 
     def __init__(self, width=0, height=0):
         pass
-
 
 cdef class AnimationFrames:
     cdef public int length
@@ -107,6 +108,7 @@ cdef class Animation:
 
 cdef class AnimationControllerCore:
     cdef public list animations
+    cdef public int animationsLen
     cdef public int currentAnimIndex
     cdef public int frame
     cdef public int lastFrame
@@ -124,9 +126,10 @@ cdef class AnimationControllerCore:
 
 
 
-    def __cinit__(self, animationDataList, startingAnimation=0):
+    def __cinit__(self, list animationDataList, int startingAnimation=0):
         self.currentAnimIndex=startingAnimation
         self.animations=animationDataList
+        self.animationsLen=len(self.animations)
         self.currentAnimation=self.animations[startingAnimation]
         self.frame=self.currentAnimation.startingFrame
         #the last frame index, used for detecting if the cache needs an update
@@ -138,13 +141,13 @@ cdef class AnimationControllerCore:
         self.frameTimeCarry=0
         self.correctedFrameTime=0
         #cast start value to bint
-        self.unpaused=<bint>False
+        self.unpaused=0
         #intermediate variables cached for speed
         self.passedFrames=0
         self.prospectiveFrame=0
         self.frameTime=0
         
-    cdef void _fastSwapAnimation(self,newAnimationIndex):
+    cdef void _fastSwapAnimation(self,int newAnimationIndex):
         #set the new index
         self.currentAnimIndex=newAnimationIndex
         #load the new animation
@@ -156,12 +159,16 @@ cdef class AnimationControllerCore:
         #clear the leaf cache
         self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
         self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
+
+        
+
+
         #clear the frame time carry value
         self.frameTimeCarry=0
         #pause the animation state
-        self.unpaused=<bint>False
+        self.unpaused=0
     
-    cpdef swapAnimation(self,newAnimationIndex):
+    cpdef swapAnimation(self,int newAnimationIndex):
         self._fastSwapAnimation(newAnimationIndex)
         
     cdef void _fastFrameUpdate(self, float frameTime):
@@ -207,8 +214,22 @@ cdef class AnimationControllerCore:
                         self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
                         self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
     
-    def frameUpdate(self, frameTime):
+    cpdef frameUpdate(self, float frameTime):
         self._fastFrameUpdate(frameTime)
+
+    cpdef pause(self):
+        self.unpaused=0
+
+    cpdef play(self):
+        self.unpaused=1
+
+    cdef _fastSetFrame(self,int frame):
+        if((frame<0)or(frame>self.currentAnimation.lengthMinusOne)):
+            raise ValueError("frameset error: given frame index is out of bounds\nvalue must be between 0 and "+str(self.currentAnimation.length)+" given value: "+str(frame))
+        self.frame=frame
+
+    cpdef setFrame(self,int frame):
+        self._fastSetFrame(frame)
         
 
 
