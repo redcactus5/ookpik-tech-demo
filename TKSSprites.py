@@ -5,7 +5,7 @@ from fastFunctions.TKSFastCode import SpriteRenderData,ImageSize,SpriteSheetData
 
 
     
-#need to rework this to work with having a wrapper class that handles most animation state
+#need to update this to combine it with the animation controller class, or at least move the logic to the controller and keep the settings in here
 class TextureSheet:
     def __init__(self,textureSurfaces:list[pygame.Surface,]|pygame.Surface,frameRate:int=0,startFrame:int=0,playOnCreation:bool=False,looping:bool=False) -> None:
         #config variables
@@ -39,7 +39,7 @@ class TextureSheet:
 
             
 
-
+    #this logic needs to be preserved,
     def frameUpdate(self,frameTime:float):
         #if currently playing
         if(self.unpaused):
@@ -86,20 +86,22 @@ class TextureSheet:
 
 
 class AnimationSet:
-    def __init__(self) -> None:
+    def __init__(self,startingAnimationIndex=0) -> None:
+
         pass
-        #need to populate this and make it use the 
+        #need to populate this and make it use the cython backend class
 
 
 
 
 
 #need to modify this to work with having a wrapper for the animations
-class BasicSprite(pygame.sprite.Sprite):
+class BasicSprite():
     def __init__(self,x:int,y:int,width:int,height:int,image:pygame.Surface) -> None:
 
         #init texture
         self.currentSpriteSheet:TextureSheet=TextureSheet(image)
+        
         #init rects
         self.rect:pygame.Rect=pygame.Rect(x,y,width,height)
         

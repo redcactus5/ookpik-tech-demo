@@ -54,27 +54,165 @@ cdef class ImageSize:
         pass
 
 
-cdef class SpriteSheetData:
-    cdef public int frame
+cdef class AnimationFrames:
+    cdef public int length
     cdef public list imageSizeList    # list of IntPair objects
     cdef public list frameList        # list of Surfaces or frames
 
-    def __cinit__(self):
-        self.frame=0
+    def __cinit__(self,animationFrames):
+        #the lists for the data for every frame
         self.imageSizeList=[]
         self.frameList=[]
+        #loop through and get the size for every frame and store it
+        for frame in animationFrames:
+            self.frameList.append(frame)
+            self.imageSizeList.append(ImageSize(frame.width, frame.height))
+        #cache our length
+        self.length=len(self.frameList)
 
-    def addFrame(self, surface, width, height):
-        self.frameList.append(surface)
-        self.imageSizeList.append(ImageSize(width, height))
+    def __init__(self,animationFrames) -> None:
+        pass
 
-cdef class SpriteSetData:
+
+cdef class Animation:
+    #the sprite sheet for this animation
+    cdef public AnimationFrames sheetData
+    #config data
+    cdef public int startingFrame
+    cdef public bint looping
+    cdef public int frameRate
+    cdef public float frameRateDelay
+    cdef public int lengthMinusOne
+    cdef public int length
+
+    def __cinit__(self,frames,startingFrame,frameRate,shouldLoop):
+        self.sheetData=frames
+        self.startingFrame=startingFrame
+        self.looping=shouldLoop
+        self.frameRate=frameRate
+        #precalculate the frame delay
+        if(self.frameRate>0):
+            self.frameRateDelay=1/self.frameRate
+        else:
+            self.frameRateDelay=0
+        self.lengthMinusOne=self.sheetData.length-1
+        self.length=self.sheetData.length
+
+
+    def __init__(self,frames,startingFrame,frameRate,shouldLoop) -> None:
+        pass
+        
+
+
+
+cdef class AnimationControllerCore:
     cdef public list animations
-    cdef public int currentAnim
+    cdef public int currentAnimIndex
+    cdef public int frame
+    cdef public int lastFrame
+    cdef public float frameTimeCarry
+    cdef public float frameTime
+    cdef public float correctedFrameTime
+    cdef public bint unpaused
+    cdef public int passedFrames
+    cdef public int prospectiveFrame
+    cdef public Animation currentAnimation
+    cdef public ImageSize currentFrameSize
+    cdef public object currentImage
+    
 
-    def __cinit__(self, animationDataList,startingAnimation=0):
-        self.currentAnim=startingAnimation
+
+
+
+    def __cinit__(self, animationDataList, startingAnimation=0):
+        self.currentAnimIndex=startingAnimation
         self.animations=animationDataList
+        self.currentAnimation=self.animations[startingAnimation]
+        self.frame=self.currentAnimation.startingFrame
+        #the last frame index, used for detecting if the cache needs an update
+        self.lastFrame=self.frame
+        #leaf cache
+        self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
+        self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
+        #the left over time between frame durations 
+        self.frameTimeCarry=0
+        self.correctedFrameTime=0
+        #cast start value to bint
+        self.unpaused=<bint>False
+        #intermediate variables cached for speed
+        self.passedFrames=0
+        self.prospectiveFrame=0
+        self.frameTime=0
+        
+    cdef void _fastSwapAnimation(self,newAnimationIndex):
+        #set the new index
+        self.currentAnimIndex=newAnimationIndex
+        #load the new animation
+        self.currentAnimation=self.animations[self.currentAnimIndex]
+        #init the starting frame
+        self.frame=self.currentAnimation.startingFrame
+        #clear the last frame
+        self.lastFrame=self.frame
+        #clear the leaf cache
+        self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
+        self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
+        #clear the frame time carry value
+        self.frameTimeCarry=0
+        #pause the animation state
+        self.unpaused=<bint>False
+    
+    cpdef swapAnimation(self,newAnimationIndex):
+        self._fastSwapAnimation(newAnimationIndex)
+        
+    cdef void _fastFrameUpdate(self, float frameTime):
+        if (self.unpaused):
+            # Cache the current animation in a local C variable
+            cdef Animation anim = self.currentAnimation
+
+            # Reuse the preallocated class attributes
+            self.frameTime = frameTime
+            self.correctedFrameTime = (self.frameTime + self.frameTimeCarry)
+
+            if((anim.frameRate > 0) and ((self.frame < anim.lengthMinusOne) or (anim.looping))):
+                #calculate how many animation frames have passed
+                self.passedFrames = <int>(self.correctedFrameTime // anim.frameRateDelay)
+                #calculate the left over time to carry
+                self.frameTimeCarry = (self.correctedFrameTime % anim.frameRateDelay)
+                #calculate the frame index we want to go to
+                self.prospectiveFrame = (self.frame + self.passedFrames)
+                #if that is a real frame and not the last one
+                if(self.prospectiveFrame < anim.length):
+                    #jump to it
+                    self.frame = self.prospectiveFrame
+                    if(self.lastFrame!=self.frame):
+                        #update the frame
+                        self.lastFrame=self.frame
+                        #update the leaf cache
+                        self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
+                        self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
+                elif(anim.looping):
+                    self.frame = (self.prospectiveFrame % anim.length)
+                    if(self.lastFrame!=self.frame):
+                        #update the frame
+                        self.lastFrame=self.frame
+                        #update the leaf cache
+                        self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
+                        self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame] 
+                else:
+                    self.frame = anim.lengthMinusOne
+                    if(self.lastFrame!=self.frame):
+                        #update the frame
+                        self.lastFrame=self.frame
+                        #update the leaf cache
+                        self.currentImage=self.currentAnimation.sheetData.frameList[self.frame]
+                        self.currentFrameSize=self.currentAnimation.sheetData.imageSizeList[self.frame]
+    
+    def frameUpdate(self, frameTime):
+        self._fastFrameUpdate(frameTime)
+        
+
+
+        
             
             
 
@@ -86,16 +224,18 @@ cdef class SpriteRenderData:
     cdef public int imageOffsetX
     cdef public int imageOffsetY
     cdef public bint visible
+    cdef public AnimationControllerCore animationControllerCoreData
 
-    def __cinit__(self,imageX,imageY,imageOffsetX,imageOffsetY,visible):
+    def __cinit__(self,imageX,imageY,imageOffsetX,imageOffsetY,visible,animationSet):
         self.imageX=imageX
         self.imageY=imageY
         self.imageOffsetX=imageOffsetX
         self.imageOffsetY=imageOffsetY
         self.visible=visible
+        self.animationController=animationSet
 
 
-#need to be reworked for new sprite render data system
+#need to be reworked for new system
 def fastDisplayListGeneratorLoop(list internalLayersReference, Camera cameraReference):
     #cache the camera positions
     cdef Camera camera=cameraReference

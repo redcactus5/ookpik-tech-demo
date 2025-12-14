@@ -38,14 +38,7 @@ class Camera:
     def move(self, x: int, y: int) -> None: ...
 
 
-class SpriteSheetData:
-    frame: int
-    imageSizeList: List[ImageSize]
-    frameList: List[Any]  # List of pygame.Surface objects or any Python object
 
-    def __init__(self) -> None: ...
-    def addFrame(self, surface: Any, width: int, height: int) -> None: ...
-    
 
 class SpriteRenderData:
     imageX: int
@@ -55,11 +48,6 @@ class SpriteRenderData:
     visible: bool
 
 
-class SpriteSetData:
-    animations: List[SpriteSetData]  # list of animation data (unspecified type)
-    currentAnim: int
-
-    def __init__(self, animationDataList: List[SpriteSetData], startingAnimation: int = 0) -> None: ...
 
 def fastDisplayListGeneratorLoop(
     internalLayersReference: list[set[BasicSprite]],
