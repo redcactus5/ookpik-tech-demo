@@ -236,10 +236,11 @@ cdef class AnimationControllerCore:
             
             
 
-cdef class TileData:
-    
+
+
 
 cdef class SpriteCoreData:
+    #core variables of sprites
     cdef public int x
     cdef public int y
     cdef public int width
@@ -249,7 +250,14 @@ cdef class SpriteCoreData:
     cdef public bint visible
     cdef public AnimationControllerCore animationController
 
-    def __cinit__(self,x,y,width,height,imageOffsetX,imageOffsetY,visible,animationController):
+    #only used by tile sprites
+    cdef public int tileSize
+    cdef public int tileX
+    cdef public int tileY
+    cdef public int tileOffsetX
+    cdef public int tileOffsetY
+
+    def __cinit__(self,int x,int y,int width,int height,bint visible, AnimationControllerCore animationController,int imageOffsetX=0,int imageOffsetY=0):
         self.x=x
         self.y=y
         self.width=width
@@ -258,6 +266,10 @@ cdef class SpriteCoreData:
         self.imageOffsetY=imageOffsetY
         self.visible=visible
         self.animationController=animationController
+
+        #init tile data
+
+
 
     cpdef show(self):
         self.visible=1
@@ -276,6 +288,9 @@ cdef class SpriteCoreData:
     cpdef setTextureOffset(self,x,y):
         self.imageOffsetX=x
         self.imageOffsetY=y
+
+     
+#need to make a subclass of the above for the tile sprite
 
 
 #need to be reworked for new system
