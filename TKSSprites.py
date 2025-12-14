@@ -10,13 +10,6 @@ from fastFunctions.TKSFastCode import SpriteRenderData,ImageSize,SpriteSheetData
 
 
 
-class AnimationSet:
-    def __init__(self,startingAnimationIndex=0) -> None:
-
-        pass
-        #need to populate this and make it use the cython backend class
-
-
 
 
 
@@ -55,10 +48,7 @@ class BasicSprite():
         self.renderData.visible=True
  
 
-    def changeTexture(self, newTexture:pygame.Surface):
-        self.currentSpriteSheet=TextureSheet(newTexture)
-        self.renderData.imageX=self.rect.x
-        self.renderData.imageY=self.rect.y
+
 
     def setPos(self,x:int,y:int):
         self.rect.x=x
@@ -75,7 +65,7 @@ class BasicSprite():
 
     def setTextureOffset(self,x:int,y:int):
         self.renderData.imageOffsetX=x
-        self.renderData.imageY=y
+        self.renderData.imageOffsetY=y
         self.renderData.imageX=self.rect.x
         self.renderData.imageY=self.rect.y
 

@@ -63,6 +63,7 @@ def getImageSize(image:pygame.Surface):
 
 
 #no fullscreen effects processor system implemented, may be done later if needed
+#need to adjust so that what is stored is the sprite internal data cython object
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int, targetFrameRate:int) -> None:
         #config stuff

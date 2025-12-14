@@ -1,6 +1,4 @@
-import numpy
 
-cimport cython
 
 cdef class FastRect:
     cdef public int x
@@ -238,23 +236,46 @@ cdef class AnimationControllerCore:
             
             
 
+cdef class TileData:
+    
 
-
-cdef class SpriteRenderData:
-    cdef public int imageX
-    cdef public int imageY
+cdef class SpriteCoreData:
+    cdef public int x
+    cdef public int y
+    cdef public int width
+    cdef public int height
     cdef public int imageOffsetX
     cdef public int imageOffsetY
     cdef public bint visible
-    cdef public AnimationControllerCore animationControllerCoreData
+    cdef public AnimationControllerCore animationController
 
-    def __cinit__(self,imageX,imageY,imageOffsetX,imageOffsetY,visible,animationSet):
-        self.imageX=imageX
-        self.imageY=imageY
+    def __cinit__(self,x,y,width,height,imageOffsetX,imageOffsetY,visible,animationController):
+        self.x=x
+        self.y=y
+        self.width=width
+        self.height=height
         self.imageOffsetX=imageOffsetX
         self.imageOffsetY=imageOffsetY
         self.visible=visible
-        self.animationController=animationSet
+        self.animationController=animationController
+
+    cpdef show(self):
+        self.visible=1
+
+    cpdef hide(self):
+        self.visible=0
+
+    cpdef setPos(self,x,y):
+        self.x=x
+        self.y=y
+
+    cpdef move(self,x,y):
+        self.x+=x
+        self.y+=y
+
+    cpdef setTextureOffset(self,x,y):
+        self.imageOffsetX=x
+        self.imageOffsetY=y
 
 
 #need to be reworked for new system
@@ -273,11 +294,10 @@ cpdef list generateDisplayList(list internalLayersReference, Camera cameraRefere
     cdef list displayList=[]
     #cache the display list append function
     cdef object append = displayList.append
-    cdef set layer
+    cdef set layerRef
     cdef object sprite
-    cdef SpriteRenderData SpriteData
-    cdef object spriteSheet
-    cdef SpriteSheetData sheetData
+    cdef SpriteCoreData SpriteData
+    cdef AnimationControllerCore animationController
     cdef ImageSize frameSize
 
     #variables for the four corners and coords
@@ -290,16 +310,16 @@ cpdef list generateDisplayList(list internalLayersReference, Camera cameraRefere
 
     #the main nested loops
     for layer in internalLayersReference:
-        for sprite in layer:
+        layerRef=layer
+        for sprite in layerRef:
             SpriteData=sprite.renderData
             #early visibility check optimisation
             if(SpriteData.visible):
                 #load the sprites
-                spriteSheet=sprite.currentSpriteSheet
-                sheetData=spriteSheet.renderingData
-                frameSize=sheetData.imageSizeList[sheetData.frame]
-                spriteX=SpriteData.imageX+SpriteData.imageOffsetX
-                spriteY=SpriteData.imageY+SpriteData.imageOffsetY
+                animationController=SpriteData.animationController
+                frameSize=animationController.currentFrameSize
+                spriteX=SpriteData.x+SpriteData.imageOffsetX
+                spriteY=SpriteData.y+SpriteData.imageOffsetY
                 spriteLeft=spriteX
                 spriteRight=spriteLeft+frameSize.width
                 spriteTop=spriteY
@@ -308,7 +328,7 @@ cpdef list generateDisplayList(list internalLayersReference, Camera cameraRefere
                 #viewport culling check
                 if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
                     (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
-                    append((sheetData.frameList[sheetData.frame], (spriteX - cameraLeft, spriteY - cameraTop)))
+                    append((animationController.currentImage, (spriteX - cameraLeft, spriteY - cameraTop)))
     return displayList
 
 
