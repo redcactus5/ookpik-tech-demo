@@ -1,5 +1,4 @@
-import numpy as np
-cimport numpy as np
+
 
 
 cdef class FastRect:
@@ -322,8 +321,7 @@ cdef class DisplayListManager:
     cdef int fps
     cdef list displayList
     cdef int frameCounter
-    cdef np.ndarray[np.int64_t, ndim=1] averagingNumbersBackend
-    cdef long int[:] averagingNumbers 
+    cdef list averagingNumbers
     cdef long int averagingNumber
     cdef long int averageSize
     cdef object append
@@ -336,8 +334,7 @@ cdef class DisplayListManager:
         self.fps=fps * 30
         self.frameCounter=0
         self.averageSize=0
-        self.averagingNumbersBackend=np.zeros(fps, dtype=np.int64)
-        self.averagingNumbers=<long int[:]> self.averagingNumbersBackend
+        self.averagingNumbers=[0] * fps
         self.append = self.displayList.append
         self.clear = self.displayList.clear
 
