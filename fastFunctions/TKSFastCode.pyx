@@ -1,4 +1,6 @@
 
+
+
 cdef class FastRect:
     cdef public int x
     cdef public int y
@@ -167,9 +169,10 @@ cdef class AnimationControllerCore:
     
         
     cpdef void frameUpdate(self, float frameTime):
+        cdef Animation anim
         if (self.unpaused):
             # Cache the current animation in a local C variable
-            cdef Animation anim = self.currentAnimation
+            anim = self.currentAnimation
 
             # Reuse the preallocated class attributes
             self.frameTime = frameTime
@@ -311,59 +314,105 @@ cdef class TileSpriteCore(SpriteCore):
 
 
 
-#need to be reworked for new system
-cpdef list generateDisplayList(list internalLayersReference, Camera cameraReference):
-    #cache the camera positions
-    cdef Camera camera=cameraReference
-    cdef int cameraLeft=camera.x
-    cdef int cameraRight=camera.x+camera.width
-    cdef int cameraTop=camera.y
-    cdef int cameraBottom=camera.y+camera.height
 
-    #cache the reference to internalLayers
-    cdef list internalLayers=internalLayersReference
 
-    #create a variable
-    cdef list displayList=[]
-    #cache the display list append function
-    cdef object append = displayList.append
-    #create some variables for objects
-    cdef set layerRef
-    cdef SpriteCore SpriteData
-    cdef AnimationControllerCore animationController
-    cdef ImageSize frameSize
+#need to be reworked
+cdef class DisplayListManager:
+    cdef int fps
+    cdef list displayList
+    cdef int frameCounter
+    cdef list averagingNumbers
+    cdef long int averagingNumber
+    cdef long int averageSize
+    cdef object append
+    cdef object clear
 
-    #variables for the four corners and coords
-    cdef int spriteLeft
-    cdef int spriteRight
-    cdef int spriteTop
-    cdef int spriteBottom
-    cdef int spriteX
-    cdef int spriteY
 
-    #the main nested loops
-    for layer in internalLayersReference:
-        layerRef=layer
-        for sprite in layerRef:
-            SpriteData=sprite.animationController
-            #early visibility check optimisation
-            if(SpriteData.visible):
-                #load the sprites
-                animationController=SpriteData.animationController
-                frameSize=animationController.currentFrameSize
-                spriteX=SpriteData.x+SpriteData.imageOffsetX
-                spriteY=SpriteData.y+SpriteData.imageOffsetY
-                spriteLeft=spriteX
-                spriteRight=spriteLeft+frameSize.width
-                spriteTop=spriteY
-                spriteBottom=spriteTop+frameSize.height
-                
-                #viewport culling check
-                if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
-                    (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
-                    append((animationController.currentImage, (spriteX - cameraLeft, spriteY - cameraTop)))
-    return displayList
+
+    def __cinit__(self,int fps):
+        self.displayList=[None] * 2000
+        self.fps=fps * 30
+        self.frameCounter=0
+        self.averageSize=0
+        self.averagingNumbers=[0] * fps
+        self.append = self.displayList.append
+        self.clear = self.displayList.clear
 
 
 
 
+    #need to be reworked for new system
+    cpdef list generateDisplayList(self, list internalLayersReference, Camera cameraReference):
+        #cache the camera positions
+        cdef Camera camera=cameraReference
+        cdef int cameraLeft=camera.x
+        cdef int cameraRight=camera.x+camera.width
+        cdef int cameraTop=camera.y
+        cdef int cameraBottom=camera.y+camera.height
+
+        #cache the reference to internalLayers
+        cdef list internalLayers=internalLayersReference
+
+
+        #logic for maintaining the buffer size:
+        if(self.frameCounter>self.fps):
+            #reset the counter and average
+            self.frameCounter=0
+            self.averageSize=0
+            #loop through the averaging values and add them up
+            for i in range(self.fps):
+                averagingNumber=self.averagingNumbers[i]# type: ignore (fixes linter issue with cython)
+                self.averageSize = self.averageSize+averagingNumber
+            #then divide by how many there were to get the average
+            self.averageSize = self.averageSize//self.fps
+            #allocate a new display list to reset the buffer
+            self.displayList=[None] * self.averageSize
+            #reset the prefetched functions to the new list
+            self.append = self.displayList.append
+            self.clear = self.displayList.clear
+        
+        
+        #if the display list has any leftover data, get rid of it
+        if(len(self.displayList)>0):
+            self.clear()
+            
+
+
+        #create some variables for objects
+        cdef set layerRef
+        cdef SpriteCore SpriteData
+        cdef AnimationControllerCore animationController
+        cdef ImageSize frameSize
+
+        #variables for the four corners and coords
+        cdef int spriteLeft
+        cdef int spriteRight
+        cdef int spriteTop
+        cdef int spriteBottom
+        cdef int spriteX
+        cdef int spriteY
+
+        #the main nested loops
+        for layer in internalLayersReference:
+            layerRef=layer
+            for sprite in layerRef:
+                SpriteData=sprite.animationController
+                #early visibility check optimisation
+                if(SpriteData.visible):
+                    #load the sprites
+                    animationController=SpriteData.animationController
+                    frameSize=animationController.currentFrameSize
+                    spriteX=SpriteData.x+SpriteData.imageOffsetX
+                    spriteY=SpriteData.y+SpriteData.imageOffsetY
+                    spriteLeft=spriteX
+                    spriteRight=spriteLeft+frameSize.width
+                    spriteTop=spriteY
+                    spriteBottom=spriteTop+frameSize.height
+                    
+                    #viewport culling check
+                    if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
+                        (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
+                        self.append((animationController.currentImage, (spriteX - cameraLeft, spriteY - cameraTop)))
+        self.averagingNumbers[self.frameCounter]=<long int>len(self.displayList)
+        self.frameCounter+=1
+        return self.displayList

@@ -8,7 +8,7 @@ sys.argv += ["build_ext", "--inplace"]
 
 setup(
     ext_modules=cythonize(
-        ["TKSFastFunctions.pyx"],  # your .pyx files
+        ["TKSFastCode.pyx"],  # your .pyx files
         compiler_directives={'language_level': "3"},
     ),
 )
