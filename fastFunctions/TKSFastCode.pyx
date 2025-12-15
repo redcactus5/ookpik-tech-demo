@@ -1,5 +1,5 @@
-
-
+import numpy as np
+cimport numpy as np
 
 cdef class FastRect:
     cdef public int x
@@ -81,7 +81,7 @@ cdef class Animation:
     cdef public int startingFrame
     cdef public bint looping
     cdef public int frameRate
-    cdef public float frameRateDelay
+    cdef public double frameRateDelay
     cdef public int lengthMinusOne
     cdef public int length
 
@@ -111,9 +111,9 @@ cdef class AnimationControllerCore:
     cdef public int currentAnimIndex
     cdef public int frame
     cdef public int lastFrame
-    cdef public float frameTimeCarry
-    cdef public float frameTime
-    cdef public float correctedFrameTime
+    cdef public double frameTimeCarry
+    cdef public double frameTime
+    cdef public double correctedFrameTime
     cdef public bint unpaused
     cdef public int passedFrames
     cdef public int prospectiveFrame
@@ -316,32 +316,35 @@ cdef class TileSpriteCore(SpriteCore):
 
 
 
-#need to be reworked
+#this one spiraled out of control
 cdef class DisplayListManager:
     cdef int fps
     cdef list displayList
     cdef int frameCounter
-    cdef list averagingNumbers
-    cdef long int averagingNumber
-    cdef long int averageSize
+    cdef object averagingNumbersBackend
+    cdef long averagingNumber
+    cdef long averageSize
+    cdef long lastAverage
     cdef object append
     cdef object clear
 
-
+    
 
     def __cinit__(self,int fps):
-        self.displayList=[None] * 2000
-        self.fps=fps * 30
+        cdef int STARTSIZE=5000
+        self.displayList=[[None,[0,0].copy()] for i in range(STARTSIZE)]
+        self.fps=fps * 15
         self.frameCounter=0
         self.averageSize=0
-        self.averagingNumbers=[0] * fps
+        
+        self.averagingNumbersBackend=np.zeros(self.fps, dtype=np.int32)
         self.append = self.displayList.append
-        self.clear = self.displayList.clear
 
 
 
 
-    #need to be reworked for new system
+
+    
     cpdef list generateDisplayList(self, list internalLayersReference, Camera cameraReference):
         #cache the camera positions
         cdef Camera camera=cameraReference
@@ -352,30 +355,30 @@ cdef class DisplayListManager:
 
         #cache the reference to internalLayers
         cdef list internalLayers=internalLayersReference
+        
+        #hoop jumping to use memory views because cython is picky
+        cdef int[:] averagingNumbersWindow = self.averagingNumbersBackend
 
-
-        #logic for maintaining the buffer size:
+        #this check runs roughly every 15 seconds and is designed to take a memory allocation hit 
+        #to free shadow allocated memory if the predicted shadow allocation exceeds the current average usage
+        #by double or more
         if(self.frameCounter>self.fps):
             #reset the counter and average
             self.frameCounter=0
-            self.averageSize=0
-            #loop through the averaging values and add them up
-            for i in range(self.fps):
-                averagingNumber=self.averagingNumbers[i]# type: ignore (fixes linter issue with cython)
-                self.averageSize = self.averageSize+averagingNumber
+            self.lastAverage=self.averageSize
+
+            #use numpy to add all the entries
+            self.averageSize=np.sum(self.averagingNumbersBackend)
+
             #then divide by how many there were to get the average
-            self.averageSize = self.averageSize//self.fps
-            #allocate a new display list to reset the buffer
-            self.displayList=[None] * self.averageSize
-            #reset the prefetched functions to the new list
-            self.append = self.displayList.append
-            self.clear = self.displayList.clear
-        
-        
-        #if the display list has any leftover data, get rid of it
-        if(len(self.displayList)>0):
-            self.clear()
-            
+            self.averageSize = self.averageSize//self.averagingNumbersBackend.size
+
+            if(self.lastAverage>=(self.averageSize*2)):
+                #allocate a new display list to reset the buffer
+                self.displayList=[[None,[0,0].copy()] for i in range(self.averageSize)]
+
+                #reset the prefetched functions to the new list
+                self.append = self.displayList.append
 
 
         #create some variables for objects
@@ -392,6 +395,14 @@ cdef class DisplayListManager:
         cdef int spriteX
         cdef int spriteY
 
+        #cache the length of the current display list
+        cdef int displayListLen=len(self.displayList)
+        #stores the current display list entry we are editing and its coords
+        cdef list entry
+        cdef list entryCoords
+
+        #counter for statistics purposes and the anti allocation algorithm
+        cdef int spriteCount=0
         #the main nested loops
         for layer in internalLayersReference:
             layerRef=layer
@@ -399,7 +410,7 @@ cdef class DisplayListManager:
                 SpriteData=sprite.animationController
                 #early visibility check optimisation
                 if(SpriteData.visible):
-                    #load the sprites
+                    #load the sprite's position and image data
                     animationController=SpriteData.animationController
                     frameSize=animationController.currentFrameSize
                     spriteX=SpriteData.x+SpriteData.imageOffsetX
@@ -412,7 +423,23 @@ cdef class DisplayListManager:
                     #viewport culling check
                     if((spriteRight >= cameraLeft)and(spriteLeft <= cameraRight)and
                         (spriteTop <= cameraBottom)and(spriteBottom  >= cameraTop)):
-                        self.append((animationController.currentImage, (spriteX - cameraLeft, spriteY - cameraTop)))
-        self.averagingNumbers[self.frameCounter]=<long int>len(self.displayList)
+                        #if we have some saved draw commands we can overwrite
+                        if(spriteCount<displayListLen):
+                            entry=self.displayList[spriteCount]
+                            entryCoords=entry[1]
+                            entry[0]=animationController.currentImage
+                            entryCoords[0]=spriteX - cameraLeft
+                            entryCoords[1]=spriteY - cameraTop
+                        else:
+                            ##otherwise allocate some new ones
+                            self.append([animationController.currentImage, [spriteX - cameraLeft, spriteY - cameraTop]])
+                        spriteCount+=1
+        #if we have any leftover space
+        if(spriteCount<displayListLen):
+            #delete it
+            del self.displayList[spriteCount:]
+        #store the final sprite count
+        averagingNumbersWindow[self.frameCounter]=max(0,spriteCount-1)
+        #increment the shadow memory usage check timer
         self.frameCounter+=1
         return self.displayList

@@ -1,7 +1,7 @@
 '''
 the 10,000 sprites engine
 '''
-#we miss you becky
+thanksForTheMemories="we miss you Becky H."
 
 import threading
 import pygame
