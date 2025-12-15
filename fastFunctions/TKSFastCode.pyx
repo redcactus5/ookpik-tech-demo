@@ -1,5 +1,4 @@
 
-
 cdef class FastRect:
     cdef public int x
     cdef public int y
@@ -239,7 +238,7 @@ cdef class AnimationControllerCore:
 
 
 
-cdef class SpriteCoreData:
+cdef class SpriteCore:
     #core variables of sprites
     cdef public int x
     cdef public int y
@@ -250,12 +249,7 @@ cdef class SpriteCoreData:
     cdef public bint visible
     cdef public AnimationControllerCore animationController
 
-    #only used by tile sprites
-    cdef public int tileSize
-    cdef public int tileX
-    cdef public int tileY
-    cdef public int tileOffsetX
-    cdef public int tileOffsetY
+    
 
     def __cinit__(self,int x,int y,int width,int height,bint visible, AnimationControllerCore animationController,int imageOffsetX=0,int imageOffsetY=0):
         self.x=x
@@ -291,6 +285,30 @@ cdef class SpriteCoreData:
 
      
 #need to make a subclass of the above for the tile sprite
+cdef class TileSpriteCore(SpriteCore):
+    #only used by tile sprites
+    cdef public int tileSize
+    cdef public int tileX
+    cdef public int tileY
+    cdef public int tileOffsetX
+    cdef public int tileOffsetY
+
+    def __cinit__(self, int tileX, int tileY, int width, int height, int tileSize, bint visible, AnimationControllerCore animationController, int imageOffsetX=0, int imageOffsetY=0,tileOffsetX:int=0,tileOffsetY:int=0):
+        #init new vals
+        self.tileSize=tileSize
+        self.tileX=tileX
+        self.tileY=tileY
+        self.tileOffsetX=tileOffsetX
+        self.imageOffsetY=tileOffsetY
+        #init existing vals
+        self.visible=visible
+        self.width=width
+        self.height=height
+        
+        self.animationController=animationController
+        self.imageOffsetX=imageOffsetX
+        self.imageOffsetY=imageOffsetY
+
 
 
 #need to be reworked for new system
@@ -305,13 +323,13 @@ cpdef list generateDisplayList(list internalLayersReference, Camera cameraRefere
     #cache the reference to internalLayers
     cdef list internalLayers=internalLayersReference
 
-    #create some variables for objects
+    #create a variable
     cdef list displayList=[]
     #cache the display list append function
     cdef object append = displayList.append
+    #create some variables for objects
     cdef set layerRef
-    cdef object sprite
-    cdef SpriteCoreData SpriteData
+    cdef SpriteCore SpriteData
     cdef AnimationControllerCore animationController
     cdef ImageSize frameSize
 
@@ -327,7 +345,7 @@ cpdef list generateDisplayList(list internalLayersReference, Camera cameraRefere
     for layer in internalLayersReference:
         layerRef=layer
         for sprite in layerRef:
-            SpriteData=sprite.renderData
+            SpriteData=sprite.animationController
             #early visibility check optimisation
             if(SpriteData.visible):
                 #load the sprites
