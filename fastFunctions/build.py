@@ -9,7 +9,7 @@ sys.argv += ["build_ext", "--inplace"]
 extensions = [
     Extension(
         name="TKSFastCode",
-        sources=["TKSFastCode.pyx"],
+        sources=["TKSFastSprites.pyx","TKSFastRenderer.pyx"],
         include_dirs=[numpy.get_include()],  # <- here
     )
 ]

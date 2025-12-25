@@ -84,7 +84,7 @@ class BasicTileSprite(BasicSprite):
         self.tileOffsetX=tileOffsetX
         self.tileOffsetY=tileOffsetY
         self.tileSize=tileSize
-        super().__init__(self.tileX*self.tileSize+self.tileOffsetX, self.tileY*self.tileSize+self.tileOffsetY, width, height, image)
+        super().__init__((self.tileX*self.tileSize)+self.tileOffsetX, self.tileY*self.tileSize+self.tileOffsetY, width, height, image)
         
 
     

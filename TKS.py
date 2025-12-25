@@ -6,12 +6,9 @@ thanksForTheMemories="we miss you Becky H."
 import threading
 import pygame
 import pygame_gui
-from fastFunctions.TKSFastCode 
-from fastFunctions.TKSFastCode import Camera
 import TKSWorkerThreads
 import TKSSprites
 #TKS engine
-
 
 #need to rewrite to use pygame
 
@@ -45,17 +42,6 @@ class GameLogic:
 def getImageSize(image:pygame.Surface):
     imageRect=image.get_rect()
     return (imageRect.width,imageRect.height)
-
-
-
-    
-
-
-
-
-
-
-
 
 
 
@@ -96,8 +82,8 @@ class Renderer:
         #sprite layer stuff, because everything is a sprite
         self.layerCount:int=layers
         #speed optimization i didnt want but must have
-        self.internalLayers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
-        
+        self.layers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
+        self.interalLayers:list[set[TKSSprites.BasicSprite]]
 
         #camera feature
         self.currentCamera:Camera=Camera(0,0,self.internalWidth,self.internalHeight)
@@ -133,6 +119,7 @@ class Renderer:
         self.scaledDisplayRect.y=self.scaledDisplayOffset[1]
         #get a new renderer subsurface for that viewport, leaving the rest as letterbox
         self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+        
         #handle integer scaling
         self.integerBufferSize=(self.internalWidth*intScalingValue,self.internalHeight*intScalingValue)
 
@@ -188,22 +175,9 @@ class Renderer:
 
     def render(self) -> None:
         #hyperoptimized render code
-        '''
-        cameraRect=self.camera.getRect()#get rekt son!
-        cameraLeft=cameraRect.left
-        cameraRight=cameraRect.right
-        cameraBottom=cameraRect.bottom
-        cameraTop=cameraRect.top
-        displayList=[
-            (sprite.image, (sprite.rect.x-cameraRect.x, sprite.rect.y-cameraRect.y)) 
-            for layer in self.internalLayers for sprite in layer 
-            if(((sprite.rect.right>=cameraLeft) and (sprite.rect.left<=cameraRight)) and 
-            ((sprite.rect.top<=cameraBottom) and (sprite.rect.bottom>=cameraTop)))
-            ]
-        '''
         if(not self.bufferSwapTrigger.is_set()):
             #use a cython version of the above to increase speed
-            displayList:list[tuple[pygame.Surface,tuple[int,int]]]=fastDisplayListGeneratorLoop(self.internalLayers,self.currentCamera)
+            displayList:list[list[pygame.Surface,list[int,int]]]=fastDisplayListGeneratorLoop(self.layers,self.currentCamera)
             self.renderFrameBuffer.fill(self.clearColor,special_flags=pygame.SRCALPHA)
             self.renderFrameBuffer.blits(displayList)
             
@@ -238,15 +212,22 @@ class Renderer:
     def addSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
         #update both the sprite group representation and the set representation, plus the camera, so everything is seamless and doesn't break
         #because of how sprite groups work and my obsession with speed in an inherently slow language
-        self.internalLayers[layer].add(sprite)
+        self.layers[layer].add(sprite)
         
 
     def addSprites(self,sprites:list[TKSSprites.BasicSprite],layer:int):
         #update both the sprite group representation and the set representation, plus the camera,
         #for all objects, so everything is seamless and doesn't break
-        self.internalLayers[layer].update(sprites)
+        self.layers[layer].update(sprites)
 
+    def swapLayersByIndex(self,layerID1:int,layerID2:int):
+        temp:set=self.layers[layerID1]
+        self.layers[layerID1]=self.layers[layerID2]
+        self.layers[layerID2]=temp
 
+    def swapLayers(self,layer1:set,layer2:set):
+        self.layers[self.layers.index(layer1)]=layer2
+        self.layers[self.layers.index(layer2)]=layer1
 
 
     def start(self) -> None:
@@ -276,29 +257,29 @@ class Renderer:
 
 
     def deleteSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
-        if(sprite in self.internalLayers[layer]):
-            self.internalLayers[layer].remove(sprite)
+        if(sprite in self.layers[layer]):
+            self.layers[layer].remove(sprite)
     
     def deleteSprites(self,spriteList:list[TKSSprites.BasicSprite],layer:int):
         for sprite in spriteList:
-            if(sprite in self.internalLayers[layer]):
-                self.internalLayers[layer].remove(sprite)
+            if(sprite in self.layers[layer]):
+                self.layers[layer].remove(sprite)
 
     def deleteSpriteFromAllLayers(self,sprite:TKSSprites.BasicSprite):
-        for layer in range(len(self.internalLayers)):
+        for layer in range(len(self.layers)):
             self.deleteSprite(sprite,layer)
  
     def deleteSpritesFromAllLayers(self,spriteList:list[TKSSprites.BasicSprite]):
-        for layer in range(len(self.internalLayers)):
+        for layer in range(len(self.layers)):
             self.deleteSprites(spriteList,layer)
 
     def clearAllLayers(self):
-        for index in range(len(self.internalLayers)):
-            self.internalLayers[index]=set()
+        for index in range(len(self.layers)):
+            self.layers[index]=set()
         self.render()
 
     def clearLayer(self,index:int):
-        self.internalLayers[index]=set()
+        self.layers[index]=set()
         self.render()
 
         
