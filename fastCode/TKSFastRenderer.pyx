@@ -4,15 +4,15 @@ cimport numpy as np
 import pygame
 import pygame_gui
 from fastCode.TKSFastSprites cimport SpriteCore,AnimationControllerCore,TileSpriteCore,ImageSize,AnimationFrames
-
+import TKSSprites
 
 cdef class Camera:
-    cdef public int x
-    cdef public int y
+    cdef public long x
+    cdef public long y
     cdef public int width
     cdef public int height
     cdef public str name
-    def __cinit__(self,x,y,width,height,name) -> None:
+    def __cinit__(self,long x,long y,int width,int height,str name) -> None:
         self.x=x
         self.y=y
         self.width=width
@@ -25,13 +25,16 @@ cdef class Camera:
     def getPos(self):
         return (self.x, self.y)
     
-    def setPos(self,x,y):
+    def setPos(self,long x,long y):
         self.x=x
         self.y=y
     
-    def move(self,x,y):
+    def move(self,long x,long y):
         self.x+=x
         self.y+=y
+
+    def rename(self, str newName):
+        self.name=newName
 
 
 #need to create the fast renderer class and scene manager class and possibly window manager class
@@ -164,4 +167,78 @@ cdef class DisplayListManager:
         self.frameCounter+=1
         return self.displayList
 
+
+cdef class SceneManager:
+    cdef Camera currentCamera
+    cdef list[set[TKSSprites.BasicSprite]] layers
+    cdef list[set[SpriteCore]] internalLayers
+    cdef list[Camera] cameras
+    
+
+    def __cinit__(self,int startingLayerCount,long startingCameraX, long startingCameraY, int internalWidth,int internalHeight):
+        #init the starting camera
+        self.currentCamera=Camera(startingCameraX,startingCameraY,internalWidth,internalHeight)#ignore the error, thats just the language server getting confused
+
+        #init the cameraList
+        self.cameras=[self.currentCamera]
+
+        #init the three layers lists
+        #these two hold the sprites, one the wrapper, and one the data core the render uses
+        self.layers:list[set[TKSSprites.BasicSprite]]=[set() for layer in range(startingLayerCount)]
+        self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
+
+
+    cpdef reset(self,int startingLayerCount,long startingCameraX, long startingCameraY, int internalWidth,int internalHeight):
+        #init the starting camera
+        self.currentCamera=Camera(startingCameraX,startingCameraY,internalWidth,internalHeight)#ignore the error, thats just the language server getting confused
+
+        #init the cameraList
+        self.cameras:list[Camera]=[self.currentCamera]
+
+        #init the three layers lists
+        #these two hold the sprites, one the wrapper, and one the data core the render uses
+        self.layers:list[set[TKSSprites.BasicSprite]]=[set() for layer in range(startingLayerCount)]
+        self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
+
+
+    cpdef getLayerCount(self):
+        return len(self.layers)
+
+    cpdef insertLayer(self,int index):
+        self.layers.insert(index,set())
+        self.internalLayers.insert(index,set())
+
+    cpdef addLayer(self):
+        self.layers.append(set())
+        self.internalLayers.append(set())
+
+    cpdef removeLayer(self,int index):
+        self.layers.pop(index)
+
+    cpdef changeCameraByIndex(self,int index):
+        self.currentCamera=self.cameras[index]
+    
+    cpdef changeCameraByName(self,str name):
+        for index,camera in enumerate(self.cameras):
+            if(camera.name==name):
+                self.currentCamera=self.cameras[index]
+                break
+
+    cpdef getCameraByIndex(self,int index):
+        return self.cameras[index]
+
+    cpdef getCameraByName(self, str name):
+        for index,camera in enumerate(self.cameras):
+            if(camera.name==name):
+                return self.cameras[index]
+
+    cpdef renameCameraByIndex(self,int index, str newName):
+        self.cameras[index].rename(newName)
+                
+        
+
+
+    
+
+    
 
