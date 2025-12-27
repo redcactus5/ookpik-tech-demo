@@ -3,6 +3,8 @@ from TKS import Core
 import threading
 import time
 
+
+#need to convert to cython with the renderer
 class frameBufferSwapper(threading.Thread):
     def __init__(self,parentRenderer:Renderer,framebufferAccessLock:threading.Lock,swapTrigger:threading.Event,frameRate:int,newFrame:threading.Event,notBusySignal:threading.Event) -> None:
         super().__init__(daemon=True)
@@ -55,7 +57,7 @@ class frameBufferSwapper(threading.Thread):
 
             
 
-
+#maybe need to convert to cython? its arbitrating python code so not sure how helpful it would be
 class UnlockedTicker(threading.Thread):
     def __init__(self,coreObject:Core):
         super().__init__(daemon=True)
@@ -100,8 +102,7 @@ class UnlockedTicker(threading.Thread):
                 self.renderUnblocked.set()
             
                     
-            if(trueInterval>0):
-                time.sleep(trueInterval)
+
 
 
     def pause(self):

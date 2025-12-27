@@ -78,6 +78,7 @@ cdef class SpriteCore:
     cpdef setPos(self, long x, long y)
     cpdef move(self, long x, long y)
     cpdef setTextureOffset(self, int x, int y)
+    cpdef setAnimationControllerCore(self, AnimationControllerCore newAnimController)
 
 cdef class TileSpriteCore(SpriteCore):
     cdef public int tileSize
@@ -92,3 +93,4 @@ cdef class TileSpriteCore(SpriteCore):
     cpdef setTilePos(self, long x, long y)
     cpdef getTileOffset(self)
     cpdef setTileOffset(self, int x, int y)
+    cpdef setAnimationControllerCore(self, AnimationControllerCore newAnimController)

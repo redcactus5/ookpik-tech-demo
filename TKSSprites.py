@@ -6,6 +6,7 @@ from fastCode.TKSFastCode import ImageSize,AnimationFrames,Animation,AnimationCo
 
 class AnimationController:
     def __init__(self,animationDataList:list[Animation],startingAnimation:int=0) -> None:
+        #initialize the core
         self.core:AnimationControllerCore=AnimationControllerCore(animationDataList,startingAnimation)
         
     def frameUpdate(self,frameTime:float):
@@ -32,7 +33,10 @@ class AnimationController:
 #need to modify this to work with having a wrapper for the animations
 class BasicSprite():
     def __init__(self,x:int,y:int,width:int,height:int,animationController:AnimationController,visible:bool=True,imageOffsetX:int=0,imageOffsetY:int=0) -> None:
+        #initialize the core
         self.core=SpriteCore(x,y,width,height,visible,animationController.core,imageOffsetX,imageOffsetY)
+        #save the animation controller wrapper
+        self.animationController=animationController
         
     def hide(self):
         self.core.hide()
@@ -49,6 +53,13 @@ class BasicSprite():
     def setTextureOffset(self,x:int,y:int):
         self.core.setTextureOffset(x,y)
 
+    def getAnimationController(self):
+        return self.animationController
+    
+    def setAnimationController(self,newAnimController:AnimationController):
+        self.animationController=newAnimController
+        self.core.animationController=self.animationController.core
+
     def frameTick(self,frameTime:float):
         pass
 
@@ -59,7 +70,10 @@ class BasicSprite():
 
 class BasicTileSprite(BasicSprite):
     def __init__(self, tileX:int, tileY:int, width:int, height:int, tileSize:int, animationController:AnimationController, tileOffsetX:int=0,tileOffsetY:int=0,imageOffsetX:int=0,imageOffsetY:int=0) -> None:
+        #initialize the core
         self.core=BasicTileSprite(tileX,tileY,width,height,tileSize,animationController,tileOffsetX,tileOffsetY,imageOffsetX,imageOffsetY)
+        #save the animation controller wrapper
+        self.animationController=animationController
     
     def move(self, x:int, y:int):
         self.core.move(x,y)
@@ -78,3 +92,7 @@ class BasicTileSprite(BasicSprite):
 
     def setTileOffset(self, x:int, y:int):
         self.core.setTileOffset(x,y)
+
+    def setAnimationController(self,newAnimController:AnimationController):
+        self.animationController=newAnimController
+        self.core.animationController=self.animationController.core

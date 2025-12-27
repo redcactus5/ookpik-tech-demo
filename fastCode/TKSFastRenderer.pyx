@@ -3,7 +3,7 @@ cimport numpy as np
 
 import pygame
 import pygame_gui
-from fastFunctions.TKSFastSprites cimport SpriteCore,AnimationControllerCore,TileSpriteCore,ImageSize,AnimationFrames
+from fastCode.TKSFastSprites cimport SpriteCore,AnimationControllerCore,TileSpriteCore,ImageSize,AnimationFrames
 
 
 cdef class Camera:
@@ -65,7 +65,7 @@ cdef class DisplayListManager:
 
 
     
-    cpdef list generateDisplayList(self, list internalLayersReference, Camera cameraReference):
+    cpdef list[list] generateDisplayList(self, list[set[SpriteCore]] internalLayersReference, Camera cameraReference):
         #cache the camera positions
         cdef Camera camera=cameraReference
         cdef int cameraLeft=camera.x
@@ -127,7 +127,7 @@ cdef class DisplayListManager:
         for layer in internalLayersReference:
             layerRef=layer
             for sprite in layerRef:
-                SpriteData=sprite.animationController
+                SpriteData:SpriteCore=sprite.animationController
                 #early visibility check optimisation
                 if(SpriteData.visible):
                     #load the sprite's position and image data
@@ -163,3 +163,5 @@ cdef class DisplayListManager:
         #increment the shadow memory usage check timer
         self.frameCounter+=1
         return self.displayList
+
+

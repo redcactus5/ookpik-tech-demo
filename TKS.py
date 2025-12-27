@@ -83,7 +83,7 @@ class Renderer:
         self.layerCount:int=layers
         #speed optimization i didnt want but must have
         self.layers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
-        self.interalLayers:list[set[TKSSprites.BasicSprite]]
+        self.interalLayers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
 
         #camera feature
         self.currentCamera:Camera=Camera(0,0,self.internalWidth,self.internalHeight)

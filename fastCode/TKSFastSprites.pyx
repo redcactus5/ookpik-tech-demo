@@ -226,7 +226,8 @@ cdef class SpriteCore:
         self.animationController=animationController
 
         
-
+    cpdef setAnimationControllerCore(self, AnimationControllerCore newAnimController):
+        self.animationController=newAnimController
 
 
     cpdef show(self):
@@ -325,5 +326,6 @@ cdef class TileSpriteCore(SpriteCore):
         self.x=(self.tileX*self.tileSize)+self.tileOffsetX
         self.y=(self.tileY*self.tileSize)+self.tileOffsetY
 
-
+    cpdef setAnimationControllerCore(self, AnimationControllerCore newAnimController):
+        self.animationController=newAnimController
 
