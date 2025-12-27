@@ -11,7 +11,6 @@ cdef class Camera:
     cdef public long y
     cdef public int width
     cdef public int height
-    cdef public str name
     def __cinit__(self,long x,long y,int width,int height,str name) -> None:
         self.x=x
         self.y=y
@@ -33,8 +32,6 @@ cdef class Camera:
         self.x+=x
         self.y+=y
 
-    def rename(self, str newName):
-        self.name=newName
 
 
 #need to create the fast renderer class and scene manager class and possibly window manager class
@@ -172,7 +169,6 @@ cdef class SceneManager:
     cdef Camera currentCamera
     cdef list[set[TKSSprites.BasicSprite]] layers
     cdef list[set[SpriteCore]] internalLayers
-    cdef list[str] layerNames
     cdef list[Camera] cameras
     
 
@@ -183,12 +179,11 @@ cdef class SceneManager:
         #init the cameraList
         self.cameras=[self.currentCamera]
 
-        #init the three layers lists
+        #init the two layers lists
         #these two hold the sprites, one the wrapper, and one the data core the render uses
         self.layers:list[set[TKSSprites.BasicSprite]]=[set() for layer in range(startingLayerCount)]
         self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
-        #init the starting layers with basic predictable names
-        self.layerNames:list[str]=["layer "+str(layer) for layer in range(startingLayerCount)]
+
 
 
     cpdef reset(self,int startingLayerCount,long startingCameraX, long startingCameraY, int internalWidth,int internalHeight):
@@ -198,71 +193,56 @@ cdef class SceneManager:
         #init the cameraList
         self.cameras:list[Camera]=[self.currentCamera]
 
-        #init the three layers lists
+        #init the two layers lists
         #these two hold the sprites, one the wrapper, and one the data core the render uses
         self.layers:list[set[TKSSprites.BasicSprite]]=[set() for layer in range(startingLayerCount)]
         self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
-        #init the starting layers with basic predictable names
-        self.layerNames:list[str]=["layer "+str(layer) for layer in range(startingLayerCount)]
 
-
-
-    cpdef 
 
 
     
     cpdef int getLayerCount(self):
         return len(self.layers)
 
-    cpdef insertLayer(self,int index,name=None):
+    cpdef insertLayer(self,int index):
         self.layers.insert(index,set())
         self.internalLayers.insert(index,set())
 
-    cpdef addLayer(self,name=None):
+    cpdef addLayer(self):
         self.layers.append(set())
         self.internalLayers.append(set())
 
-    cpdef removeLayerByIndex(self,int index):
+    cpdef removeLayer(self,int index):
         self.layers.pop(index)
 
     #camera functions
-    cpdef changeCameraByIndex(self,int index):
+    cpdef changeCamera(self,int index):
         self.currentCamera=self.cameras[index]
-    
-    cpdef int findCameraIndexByName(self, name):
-        #loop through every camera
-        for index,camera in enumerate(self.cameras):
-            #if the name matches
-            if(camera.name==name):
-                #return the index
-                return index
-    
-    cpdef changeCameraByName(self,str name):
-        self.currentCamera=self.cameras[self.findCameraIndexByName(name)]
 
-    cpdef Camera getCameraByIndex(self,int index):
+    cpdef Camera getCamera(self,int index):
         return self.cameras[index]
 
-    cpdef Camera getCameraByName(self, str name):
-        return self.cameras[self.findCameraIndexByName(name)]
+    cpdef Camera getCurrentCamera(self):
+        return self.currentCamera
 
-    cpdef renameCameraByIndex(self,int index, str newName):
-        self.cameras[index].rename(newName)
-    
-    cpdef renameCameraByName(self,str oldName,str newName):
-        self.cameras[self.findCameraIndexByName(oldName)].rename(newName)
-
-    cpdef removeCameraByIndex(self,int targetIndex):
+    cpdef removeCamera(self,int targetIndex):
         self.cameras.pop(targetIndex)
-
-    cpdef removeCameraByName(self, targetName):
-        self.cameras.pop(self.findCameraIndexByName(targetName))
 
     cpdef addCamera(self,Camera newCamera):
         self.cameras.append(newCamera)
 
     cpdef insertCamera(self,Camera newCamera, int insertionIndex):
         self.cameras.insert(insertionIndex,newCamera)
+
+    cpdef int findCamera(self,Camera cameraToFind):
+        for index in range(len(self.cameras)):
+            if(self.cameras[index]==cameraToFind):
+                return index
+        return -1
+
+
+    
+
 
 
 
