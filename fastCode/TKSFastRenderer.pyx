@@ -127,7 +127,7 @@ cdef class DisplayListManager:
         for layer in internalLayersReference:
             layerRef=layer
             for sprite in layerRef:
-                SpriteData:SpriteCore=sprite.animationController
+                SpriteData:SpriteCore=sprite.core
                 #early visibility check optimisation
                 if(SpriteData.visible):
                     #load the sprite's position and image data
@@ -163,6 +163,13 @@ cdef class DisplayListManager:
         #increment the shadow memory usage check timer
         self.frameCounter+=1
         return self.displayList
+
+
+
+
+
+
+
 
 
 cdef class SceneManager:
@@ -236,6 +243,7 @@ cdef class SceneManager:
         self.cameras.insert(insertionIndex,newCamera)
 
     cpdef int findCamera(self,Camera cameraToFind):
+        cdef int index
         for index in range(len(self.cameras)):
             if(self.cameras[index]==cameraToFind):
                 return index
@@ -256,6 +264,7 @@ cdef class SceneManager:
         cdef SpriteCore tempCore
         cdef set[TKSSprites.BasicSprite] targetLayer
         cdef set[SpriteCore] targetInternalLayer
+        cdef int index
         targetLayer=self.layers[layerIndex]
         targetInternalLayer=self.internalLayers[layerIndex]
 
@@ -303,20 +312,24 @@ cdef class SceneManager:
             self.internalLayers[layer].remove(<SpriteCore>sprite.core)
     
     cpdef deleteSprites(self,list[TKSSprites.BasicSprite] spriteList,int layer):
+        cdef TKSSprites.BasicSprite sprite
         for sprite in spriteList:
             if(sprite in self.layers[layer]):
                 self.layers[layer].remove(sprite)
                 self.internalLayers[layer].remove(<SpriteCore>sprite.core)
 
     cpdef deleteSpriteFromAllLayers(self,TKSSprites.BasicSprite sprite):
+        cdef int layer
         for layer in range(len(self.layers)):
             self.deleteSprite(sprite,layer)
  
     cpdef deleteSpritesFromAllLayers(self,list[TKSSprites.BasicSprite] spriteList):
+        cdef int layer
         for layer in range(len(self.layers)):
             self.deleteSprites(spriteList,layer)
 
     cpdef clearAllLayers(self):
+        cdef int index
         for index in range(len(self.layers)):
             self.layers[index].clear()
             self.internalLayers[index].clear()

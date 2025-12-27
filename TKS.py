@@ -49,7 +49,7 @@ def getImageSize(image:pygame.Surface):
 
 
 #no fullscreen effects processor system implemented, may be done later if needed
-#need to adjust so that what is stored is the sprite internal data cython object
+#TODO: move to cython code
 class Renderer:
     def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int, targetFrameRate:int) -> None:
         #config stuff
@@ -80,13 +80,6 @@ class Renderer:
         self.oldSize=(0,0)
         self.framebufferAccessLock:threading.Lock=threading.Lock()
         #sprite layer stuff, because everything is a sprite
-        self.layerCount:int=layers
-        #speed optimization i didnt want but must have
-        self.layers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
-        self.interalLayers:list[set[TKSSprites.BasicSprite]]=[set() for l in range(layers)]
-
-        #camera feature
-        self.currentCamera:Camera=Camera(0,0,self.internalWidth,self.internalHeight)
 
         #TODO: menu integration
         #placeholder for menu stuff
@@ -188,48 +181,6 @@ class Renderer:
 
 
 
-
-
-    def getCurrentCamera(self):
-        return self.currentCamera
-    
-    
-
-
-    def setCurrentCamera(self,camera:Camera):
-        self.currentCamera=camera
-
-
-    def moveCamera(self,x,y):
-        self.currentCamera.move(x,y)
-
-
-    def setCameraPos(self,x,y):
-        self.currentCamera.setPos(x,y)
-
-
-    
-    def addSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
-        #update both the sprite group representation and the set representation, plus the camera, so everything is seamless and doesn't break
-        #because of how sprite groups work and my obsession with speed in an inherently slow language
-        self.layers[layer].add(sprite)
-        
-
-    def addSprites(self,sprites:list[TKSSprites.BasicSprite],layer:int):
-        #update both the sprite group representation and the set representation, plus the camera,
-        #for all objects, so everything is seamless and doesn't break
-        self.layers[layer].update(sprites)
-
-    def swapLayersByIndex(self,layerID1:int,layerID2:int):
-        temp:set=self.layers[layerID1]
-        self.layers[layerID1]=self.layers[layerID2]
-        self.layers[layerID2]=temp
-
-    def swapLayers(self,layer1:set,layer2:set):
-        self.layers[self.layers.index(layer1)]=layer2
-        self.layers[self.layers.index(layer2)]=layer1
-
-
     def start(self) -> None:
         #make sure the display is inactive
         if(pygame.display.get_active()):
@@ -254,33 +205,6 @@ class Renderer:
             self.framebufferAccessLock.release()
         
 
-
-
-    def deleteSprite(self,sprite:TKSSprites.BasicSprite,layer:int):
-        if(sprite in self.layers[layer]):
-            self.layers[layer].remove(sprite)
-    
-    def deleteSprites(self,spriteList:list[TKSSprites.BasicSprite],layer:int):
-        for sprite in spriteList:
-            if(sprite in self.layers[layer]):
-                self.layers[layer].remove(sprite)
-
-    def deleteSpriteFromAllLayers(self,sprite:TKSSprites.BasicSprite):
-        for layer in range(len(self.layers)):
-            self.deleteSprite(sprite,layer)
- 
-    def deleteSpritesFromAllLayers(self,spriteList:list[TKSSprites.BasicSprite]):
-        for layer in range(len(self.layers)):
-            self.deleteSprites(spriteList,layer)
-
-    def clearAllLayers(self):
-        for index in range(len(self.layers)):
-            self.layers[index]=set()
-        self.render()
-
-    def clearLayer(self,index:int):
-        self.layers[index]=set()
-        self.render()
 
         
 
