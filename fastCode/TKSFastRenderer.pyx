@@ -252,12 +252,49 @@ cdef class SceneManager:
         self.internalLayers[layerIndex].add(<SpriteCore>newSprite.core)
 
     cpdef addMultipleSprites(self,int layerIndex, list[TKSSprites.BasicSprite] newSpriteList):
-        self.layers[layerIndex].update(newSpriteList)
-        self.internalLayers[layerIndex].update(<list[SpriteCore]>[<SpriteCore>sprite.core for sprite in newSpriteList])
+        cdef TKSSprites.BasicSprite tempWrapper
+        cdef SpriteCore tempCore
+        cdef set[TKSSprites.BasicSprite] targetLayer
+        cdef set[SpriteCore] targetInternalLayer
+        targetLayer=self.layers[layerIndex]
+        targetInternalLayer=self.internalLayers[layerIndex]
+
+        for index in range(len(newSpriteList)):
+            tempWrapper=newSpriteList[index]
+            tempCore=<SpriteCore>tempWrapper.core
+            targetLayer.add(tempWrapper)
+            targetInternalLayer.add(tempCore)
 
 
+    cpdef swapLayersByIndex(self,int layerID1,int layerID2):
+        #swap the wrappers
+        cdef set[TKSSprites.BasicSprite] wrapperTemp
+        wrapperTemp=self.layers[layerID1]
+        self.layers[layerID1]=self.layers[layerID2]
+        self.layers[layerID2]=wrapperTemp
+        #swap the internal layers
+        cdef set[SpriteCore] coreTemp
+        coreTemp=self.internalLayers[layerID1]
+        self.internalLayers[layerID1]=self.internalLayers[layerID2]
+        self.internalLayers[layerID2]=coreTemp
 
 
+    cpdef swapLayers(self,set layer1,set layer2):
+        cdef int layerID1
+        cdef int layerID2
+        layerID1=self.layers.index(layer1)
+        layerID2=self.layers.index(layer2)
+        #swap the wrappers
+        cdef set[TKSSprites.BasicSprite] wrapperTemp
+        wrapperTemp=self.layers[layerID1]
+        self.layers[layerID1]=self.layers[layerID2]
+        self.layers[layerID2]=wrapperTemp
+        #swap the internal layers
+        cdef set[SpriteCore] coreTemp
+        coreTemp=self.internalLayers[layerID1]
+        self.internalLayers[layerID1]=self.internalLayers[layerID2]
+        self.internalLayers[layerID2]=coreTemp
+        
     
 
 
