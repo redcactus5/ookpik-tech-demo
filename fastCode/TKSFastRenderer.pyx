@@ -199,7 +199,8 @@ cdef class SceneManager:
         self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
 
 
-
+    cdef _getInternalLayers(self):
+        return self.internalLayers
     
     cpdef int getLayerCount(self):
         return len(self.layers)
@@ -239,6 +240,22 @@ cdef class SceneManager:
             if(self.cameras[index]==cameraToFind):
                 return index
         return -1
+
+    cpdef moveCurrentCamera(self, long x, long y):
+        self.currentCamera.move(x,y)
+
+    cpdef setCurrentCameraPos(self, long x, long y):
+        self.currentCamera.setPos(x,y)
+
+    cpdef addSprite(self,int layerIndex, TKSSprites.BasicSprite newSprite):
+        self.layers[layerIndex].add(newSprite)
+        self.internalLayers[layerIndex].add(<SpriteCore>newSprite.core)
+
+    cpdef addMultipleSprites(self,int layerIndex, list[TKSSprites.BasicSprite] newSpriteList):
+        self.layers[layerIndex].update(newSpriteList)
+        self.internalLayers[layerIndex].update(<list[SpriteCore]>[<SpriteCore>sprite.core for sprite in newSpriteList])
+
+
 
 
     
