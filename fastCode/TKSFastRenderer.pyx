@@ -294,6 +294,37 @@ cdef class SceneManager:
         coreTemp=self.internalLayers[layerID1]
         self.internalLayers[layerID1]=self.internalLayers[layerID2]
         self.internalLayers[layerID2]=coreTemp
+
+    
+
+    cpdef deleteSprite(self,TKSSprites.BasicSprite sprite,int layer):
+        if(sprite in self.layers[layer]):
+            self.layers[layer].remove(sprite)
+            self.internalLayers[layer].remove(<SpriteCore>sprite.core)
+    
+    cpdef deleteSprites(self,list[TKSSprites.BasicSprite] spriteList,int layer):
+        for sprite in spriteList:
+            if(sprite in self.layers[layer]):
+                self.layers[layer].remove(sprite)
+                self.internalLayers[layer].remove(<SpriteCore>sprite.core)
+
+    cpdef deleteSpriteFromAllLayers(self,TKSSprites.BasicSprite sprite):
+        for layer in range(len(self.layers)):
+            self.deleteSprite(sprite,layer)
+ 
+    cpdef deleteSpritesFromAllLayers(self,list[TKSSprites.BasicSprite] spriteList):
+        for layer in range(len(self.layers)):
+            self.deleteSprites(spriteList,layer)
+
+    cpdef clearAllLayers(self):
+        for index in range(len(self.layers)):
+            self.layers[index].clear()
+            self.internalLayers[index].clear()
+        
+
+    cpdef clearLayer(self,int index):
+        self.layers[index].clear()
+        self.internalLayers[index].clear()
         
     
 
