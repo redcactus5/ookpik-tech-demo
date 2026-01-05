@@ -51,7 +51,7 @@ def getImageSize(image:pygame.Surface):
 #no fullscreen effects processor system implemented, may be done later if needed
 #TODO: move to cython code
 class Renderer:
-    def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple,layers:int, targetFrameRate:int) -> None:
+    def __init__(self,displayWidth:int, displayHeight:int, clearColor:tuple, targetFrameRate:int) -> None:
         #config stuff
         self.internalWidth=displayWidth
         self.internalHeight=displayHeight
@@ -64,10 +64,10 @@ class Renderer:
         self.displayFrameBuffer:pygame.Surface=None
         self.renderFrameBuffer:pygame.Surface=None
         #our numbers used for fancy scaling
-        self.scaledDisplayRect=pygame.Rect(0,0,self.internalWidth,self.internalHeight)
-        self.integerBufferSize:tuple[int,int]=(self.internalWidth,self.internalHeight)
-        self.scaledSize:tuple[int,int]=(0,0)
-        self.scaledDisplayOffset=(0,0)
+        self.scaledDisplayRect=[0,0,self.internalWidth,self.internalHeight]
+        self.integerBufferSize:list[int]=[self.internalWidth,self.internalHeight]
+        self.scaledSize:list[int]=[0,0]
+        self.scaledDisplayOffset=[0,0]
         self.scaleStepSize=10
         self.shouldSmoothScale:bool=False
         #swapper and its events

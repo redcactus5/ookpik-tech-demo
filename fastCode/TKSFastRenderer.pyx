@@ -5,6 +5,7 @@ import pygame
 import pygame_gui
 from fastCode.TKSFastSprites cimport SpriteCore,AnimationControllerCore,TileSpriteCore,ImageSize,AnimationFrames
 import TKSSprites
+import threading
 
 cdef class Camera:
     cdef public long x
@@ -171,11 +172,11 @@ cdef class DisplayListManager:
 
 
 
-
 cdef class SceneManager:
     cdef Camera currentCamera
-    cdef list[set[TKSSprites.BasicSprite]] layers
-    cdef list[set[SpriteCore]] internalLayers
+    cdef list[list[TKSSprites.BasicSprite]] layers
+    cdef list[list[SpriteCore]] internalLayers
+    cdef list[dict[TKSSprites.BasicSprite, int]] indexLookupTables
     cdef list[Camera] cameras
     
 
@@ -188,8 +189,9 @@ cdef class SceneManager:
 
         #init the two layers lists
         #these two hold the sprites, one the wrapper, and one the data core the render uses
-        self.layers:list[set[TKSSprites.BasicSprite]]=[set() for layer in range(startingLayerCount)]
-        self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
+        self.layers:list[list[TKSSprites.BasicSprite]]=[list() for layer in range(startingLayerCount)]
+        self.internalLayers:list[list[SpriteCore]]=[list() for layer in range(startingLayerCount)]
+        self.indexLookupTables:list[dict[TKSSprites.BasicSprite, int]]=[dict() for layer in range(startingLayerCount)]
 
 
 
@@ -202,8 +204,9 @@ cdef class SceneManager:
 
         #init the two layers lists
         #these two hold the sprites, one the wrapper, and one the data core the render uses
-        self.layers:list[set[TKSSprites.BasicSprite]]=[set() for layer in range(startingLayerCount)]
-        self.internalLayers:list[set[SpriteCore]]=[set() for layer in range(startingLayerCount)]
+        self.layers:list[list[TKSSprites.BasicSprite]]=[list() for layer in range(startingLayerCount)]
+        self.internalLayers:list[list[SpriteCore]]=[list() for layer in range(startingLayerCount)]
+        self.indexLookupTables:list[dict[TKSSprites.BasicSprite, int]]=[dict() for layer in range(startingLayerCount)]
 
 
     cdef _getInternalLayers(self):
@@ -213,15 +216,19 @@ cdef class SceneManager:
         return len(self.layers)
 
     cpdef insertLayer(self,int index):
-        self.layers.insert(index,set())
-        self.internalLayers.insert(index,set())
+        self.layers.insert(index,list())
+        self.internalLayers.insert(index,list())
+        self.indexLookupTables.insert(index,dict())
 
     cpdef addLayer(self):
-        self.layers.append(set())
-        self.internalLayers.append(set())
+        self.layers.append(list())
+        self.internalLayers.append(list())
+        self.indexLookupTables.append(dict())
 
     cpdef removeLayer(self,int index):
         self.layers.pop(index)
+        self.internalLayers.pop(index)
+        self.indexLookupTables.pop(index)
 
     #camera functions
     cpdef changeCamera(self,int index):
@@ -256,67 +263,144 @@ cdef class SceneManager:
         self.currentCamera.setPos(x,y)
 
     cpdef addSprite(self,int layerIndex, TKSSprites.BasicSprite newSprite):
-        self.layers[layerIndex].add(newSprite)
-        self.internalLayers[layerIndex].add(<SpriteCore>newSprite.core)
+        self.layers[layerIndex].append(newSprite)
+        self.internalLayers[layerIndex].append(<SpriteCore>newSprite.core)
+        self.indexLookupTables[layerIndex][newSprite]=len(self.layers[layerIndex])-1
 
     cpdef addMultipleSprites(self,int layerIndex, list[TKSSprites.BasicSprite] newSpriteList):
         cdef TKSSprites.BasicSprite tempWrapper
         cdef SpriteCore tempCore
-        cdef set[TKSSprites.BasicSprite] targetLayer
-        cdef set[SpriteCore] targetInternalLayer
+        cdef list[TKSSprites.BasicSprite] targetLayer
+        cdef list[SpriteCore] targetInternalLayer
+        cdef dict[TKSSprites.BasicSprite, int] targetLookupTable
         cdef int index
+        #the layer in the layer lists we are targeting
         targetLayer=self.layers[layerIndex]
         targetInternalLayer=self.internalLayers[layerIndex]
-
+        targetLookupTable=self.indexLookupTables[layerIndex]
+        #loop through the sprites to add
         for index in range(len(newSpriteList)):
+            #extract the sprite to add
             tempWrapper=newSpriteList[index]
+            #extract its core
             tempCore=<SpriteCore>tempWrapper.core
-            targetLayer.add(tempWrapper)
-            targetInternalLayer.add(tempCore)
+            #add the wrapper to its list
+            targetLayer.append(tempWrapper)
+            #add the core to its list
+            targetInternalLayer.append(tempCore)
+            #save the index in the lookup table
+            self.indexLookupTables[layerIndex][tempWrapper]=len(self.layers[layerIndex])-1
+
 
 
     cpdef swapLayersByIndex(self,int layerID1,int layerID2):
+        #pretty simple and self explanitory, just swap some references
         #swap the wrappers
-        cdef set[TKSSprites.BasicSprite] wrapperTemp
+        cdef list[TKSSprites.BasicSprite] wrapperTemp
         wrapperTemp=self.layers[layerID1]
         self.layers[layerID1]=self.layers[layerID2]
         self.layers[layerID2]=wrapperTemp
         #swap the internal layers
-        cdef set[SpriteCore] coreTemp
+        cdef list[SpriteCore] coreTemp
         coreTemp=self.internalLayers[layerID1]
         self.internalLayers[layerID1]=self.internalLayers[layerID2]
         self.internalLayers[layerID2]=coreTemp
+        #swap the lookup tables
+        cdef dict lookupTemp
+        lookupTemp=self.indexLookupTables[layerID1]
+        self.indexLookupTables[layerID1]=self.indexLookupTables[layerID2]
+        self.indexLookupTables[layerID2]=lookupTemp
 
 
-    cpdef swapLayers(self,set layer1,set layer2):
+    cpdef swapLayers(self,list layer1, list layer2):
         cdef int layerID1
         cdef int layerID2
         layerID1=self.layers.index(layer1)
         layerID2=self.layers.index(layer2)
         #swap the wrappers
-        cdef set[TKSSprites.BasicSprite] wrapperTemp
+        cdef list[TKSSprites.BasicSprite] wrapperTemp
         wrapperTemp=self.layers[layerID1]
         self.layers[layerID1]=self.layers[layerID2]
         self.layers[layerID2]=wrapperTemp
         #swap the internal layers
-        cdef set[SpriteCore] coreTemp
+        cdef list[SpriteCore] coreTemp
         coreTemp=self.internalLayers[layerID1]
         self.internalLayers[layerID1]=self.internalLayers[layerID2]
         self.internalLayers[layerID2]=coreTemp
+        #swap the lookup tables
+        cdef dict lookupTemp
+        lookupTemp=self.indexLookupTables[layerID1]
+        self.indexLookupTables[layerID1]=self.indexLookupTables[layerID2]
+        self.indexLookupTables[layerID2]=lookupTemp
 
     
 
     cpdef deleteSprite(self,TKSSprites.BasicSprite sprite,int layer):
-        if(sprite in self.layers[layer]):
-            self.layers[layer].remove(sprite)
-            self.internalLayers[layer].remove(<SpriteCore>sprite.core)
-    
+        #temporary object storage
+        cdef TKSSprites.BasicSprite tempWrapper0
+        cdef TKSSprites.BasicSprite tempWrapper1
+        cdef SpriteCore tempCore0
+        cdef SpriteCore tempCore1
+        cdef int tempIndex0
+        cdef int tempIndex1
+
+        #the target lists and dicts
+        cdef list targetLayer
+        cdef list targetInternalLayer
+        cdef dict targetLookupTable
+
+        #if the sprite exists
+        if(sprite in self.indexLookupTables[layer]):
+            #grab the layers we are removing from
+            targetLayer=self.layers[layer]
+            targetInternalLayer=self.internalLayers[layer]
+            targetLookupTable=self.indexLookupTables[layer]
+
+            #grab the indexes for the swap trick
+            #grab the index of the sprite to delete
+            tempIndex0=targetLookupTable[sprite]
+            #and the last index overall
+            tempIndex1=len(self.layers[layer])-1
+            #if the index isnt already the last one
+            if(tempIndex0!=tempIndex1):
+                #do a swap trick to prevent dict reconstruction
+                #grab the target sprite wrapper
+                tempWrapper0=targetLayer[tempIndex0]
+                #grab the last sprite wrapper
+                tempWrapper1=targetLayer[tempIndex1]
+                #grab the target core
+                tempCore0=targetInternalLayer[tempIndex0]
+                #grab the last core
+                tempCore1=targetInternalLayer[tempIndex1]
+
+                #swap the lookup table indexes
+                #targetLookupTable[sprite]=tempIndex1 NOTE: this line can be omitted because we are removing it anyway so it doesn't need an update
+                targetLookupTable[tempWrapper1]=tempIndex0
+
+                #swap the wrapper indexes
+                targetLayer[tempIndex0]=tempWrapper1
+                targetLayer[tempIndex1]=tempWrapper0
+
+                #swap the core indexes
+                targetInternalLayer[tempIndex0]=tempCore1 
+                targetInternalLayer[tempIndex1]=tempCore0
+
+            #remove the target indexes
+            targetLayer.pop()
+            targetInternalLayer.pop()
+            #what we will remove will always be the target sprite
+            targetLookupTable.pop(sprite)
+
+            #i know this looks complicated but it prevents needing to rebuild the lookup table from scratch every time we do this
+
+                
+                
+
+    #these are all pretty self explanatory
     cpdef deleteSprites(self,list[TKSSprites.BasicSprite] spriteList,int layer):
         cdef TKSSprites.BasicSprite sprite
         for sprite in spriteList:
-            if(sprite in self.layers[layer]):
-                self.layers[layer].remove(sprite)
-                self.internalLayers[layer].remove(<SpriteCore>sprite.core)
+            self.deleteSprite(sprite,layer)
 
     cpdef deleteSpriteFromAllLayers(self,TKSSprites.BasicSprite sprite):
         cdef int layer
@@ -333,13 +417,43 @@ cdef class SceneManager:
         for index in range(len(self.layers)):
             self.layers[index].clear()
             self.internalLayers[index].clear()
-        
+            self.indexLookupTables[index].clear()
 
     cpdef clearLayer(self,int index):
         self.layers[index].clear()
         self.internalLayers[index].clear()
+        self.indexLookupTables[index].clear()
         
-    
+
+
+
+
+
+
+cdef class Renderer:
+    #configuration settings
+    cdef int internalWidth
+    cdef int internalHeight
+    cdef tuple clearColor
+    cdef int targetFrameRate
+    #the frameBuffer and different render caches
+    cdef pygame.Surface screen
+    cdef pygame.Surface letterBoxViewPort
+    cdef pygame.Surface integerScaleBuffer
+    cdef pygame.Surface displayFrameBuffer
+    cdef pygame.Surface renderFramebuffer
+    cdef pygame.Surface menuFrameBuffer
+
+    #fancy scaling values
+    cdef list[int] scaledDisplayRect
+    cdef list[int] integerBufferSize
+    cdef list[int] scaledSize
+    cdef list[int] scaledDisplayOffset
+
+    #the steps in which the smooth scaling will increase
+    cdef int scaledStepSize
+    #the flag to enable smooth scaling
+    cdef bint shouldSmoothScale
 
 
 
