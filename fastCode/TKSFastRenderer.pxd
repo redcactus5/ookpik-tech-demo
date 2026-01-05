@@ -71,24 +71,3 @@ cdef class SceneManager:
     cpdef clearAllLayers(self)
     cpdef clearLayer(self, int index)
 
-
-cdef class Renderer:
-    cdef int internalWidth
-    cdef int internalHeight
-    cdef tuple clearColor
-    cdef int targetFrameRate
-
-    cdef pygame.Surface screen
-    cdef pygame.Surface letterBoxViewPort
-    cdef pygame.Surface integerScaleBuffer
-    cdef pygame.Surface displayFrameBuffer
-    cdef pygame.Surface renderFramebuffer
-    cdef pygame.Surface menuFrameBuffer
-
-    cdef list[int] scaledDisplayRect
-    cdef list[int] integerBufferSize
-    cdef list[int] scaledSize
-    cdef list[int] scaledDisplayOffset
-
-    cdef int scaledStepSize
-    cdef bint shouldSmoothScale

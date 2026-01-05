@@ -442,6 +442,7 @@ cdef class Renderer:
     cdef pygame.Surface integerScaleBuffer
     cdef pygame.Surface displayFrameBuffer
     cdef pygame.Surface renderFramebuffer
+    cdef pygame.Surface transferBuffer
     cdef pygame.Surface menuFrameBuffer
 
     #fancy scaling values
