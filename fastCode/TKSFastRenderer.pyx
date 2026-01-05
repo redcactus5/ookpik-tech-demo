@@ -22,16 +22,22 @@ cdef class Camera:
     def __init__(self,x=0,y=0,width=0,height=0) -> None:
         pass
 
-    def getPos(self):
+    cpdef getPos(self):
         return (self.x, self.y)
     
-    def setPos(self,long x,long y):
+    cpdef setPos(self,long x,long y):
         self.x=x
         self.y=y
     
-    def move(self,long x,long y):
+    cpdef move(self,long x,long y):
         self.x+=x
         self.y+=y
+
+    cdef setSize(self, int newWidth, int newHeight):
+        self.width=newWidth
+        self.height=newHeight
+
+    
 
 
 
@@ -429,7 +435,7 @@ cdef class SceneManager:
 
 
 
-
+#switched back to triple buffering because multithreaded double buffering was getting to be too much trouble
 cdef class Renderer:
     #configuration settings
     cdef int internalWidth
@@ -455,6 +461,12 @@ cdef class Renderer:
     cdef int scaledStepSize
     #the flag to enable smooth scaling
     cdef bint shouldSmoothScale
+    #the flag to determine if we should draw
+    cdef bint shouldDraw
+    cdef list[int] oldSize
+    cdef threading.Lock frameBufferSwapLock
+
+
 
 
 
