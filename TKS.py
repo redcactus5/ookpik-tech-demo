@@ -110,7 +110,7 @@ class Renderer:
         self.scaledSize=(int(self.internalWidth*floatScalingValue),int(self.internalHeight*floatScalingValue))
         self.scaledDisplayRect.width=self.scaledSize[0]
         self.scaledDisplayRect.height=self.scaledSize[1]
-        self.scaledDisplayOffset=(((self.lastSize[0]-self.scaledSize[0])//2),((self.lastSize[1]-self.scaledSize[1])//2))
+        self.scaledDisplayOffset=(((self.oldSize[0]-self.scaledSize[0])//2),((self.oldSize[1]-self.scaledSize[1])//2))
         self.scaledDisplayRect.x=self.scaledDisplayOffset[0]
         self.scaledDisplayRect.y=self.scaledDisplayOffset[1]
         #get a new renderer subsurface for that viewport, leaving the rest as letterbox
@@ -127,7 +127,7 @@ class Renderer:
         screenSize=self.screen.get_size()
 
         #if the screensize has changed
-        if((self.lastSize!=screenSize)):
+        if((self.oldSize!=screenSize)):
             #clear the new frame trigger if it has been set
             self.newFrameTrigger.clear()
             if((screenSize[0]!=0)and(screenSize[1]!=0)):
@@ -144,7 +144,7 @@ class Renderer:
         #if there is a reason to draw a new frame
         if(self.shouldDraw):
             #cache the current screensize for size checking
-            self.lastSize=screenSize
+            self.oldSize=screenSize
             #clear the screen
             self.screen.fill(backgroundColor)
             #set the wait state flag so the go around system has a shred of a chance of working

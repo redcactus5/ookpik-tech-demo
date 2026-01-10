@@ -6,6 +6,7 @@ import pygame_gui
 from fastCode.TKSFastSprites cimport SpriteCore,AnimationControllerCore,TileSpriteCore,ImageSize,AnimationFrames
 import TKSSprites
 import threading
+import TKSExceptions
 
 cdef class Camera:
     cdef public long x
@@ -95,7 +96,7 @@ cdef class DisplayListManager:
             #then divide by how many there were to get the average
             self.averageSize = self.averageSize//self.averagingNumbersBackend.size
 
-            if(self.lastAverage>=(self.averageSize*2)):
+            if(self.lastAverage>=(self.averageSize * 2)):
                 #allocate a new display list to reset the buffer
                 self.displayList=[[None,[0,0].copy()] for i in range(self.averageSize)]
 
@@ -442,8 +443,10 @@ cdef class Renderer:
     #fancy scaling values
     cdef list[int] scaledDisplayRect
     cdef list[int] integerBufferSize
-    cdef list[int] scaledSize
-    cdef list[int] scaledDisplayOffset
+    cdef int scaledWidth
+    cdef int scaledHeight
+    cdef int scaledDisplayOffsetX
+    cdef int scaledDisplayOffsetY
 
     #the steps in which the smooth scaling will increase
     cdef int scaledStepSize
@@ -459,9 +462,17 @@ cdef class Renderer:
 
     #the current scene manager object
     cdef SceneManager currentSceneManager
-
+    #the current display list manager object
     cdef DisplayListManager currentDisplayListManager
 
+    #temporary values for math
+    cdef int intScalingValue
+    cdef float floatScalingValue
+    #storage for a value so i dont look it up every frame
+    cdef int clearFlag
+
+    #the trigger for rendering the next frame
+    cdef threading.Event newFrameTrigger
 
     def __cinit__(self):
         #init the variables of the object for safety
@@ -484,12 +495,14 @@ cdef class Renderer:
 
         #init the values used for smooth scaling
         self.scaledDisplayRect=[0,0,self.internalWidth,self.internalHeight]
-        
         self.integerBufferSize=[self.internalWidth,self.internalHeight]
+        self.scaledWidth=0
+        self.scaledHeight=0
+        self.scaledDisplayOffsetX=0
+        self.scaledDisplayOffsetY=0
+        self.intScalingValue=0
+        self.floatScalingValue=0
         
-        self.scaledSize=[0,0]
-        
-        self.scaledDisplayOffset=[0,0]
         #the size of the steps that the window will scale by
         self.scaleStepSize=20
         #enables or disables smooth scaling if needed or not as determined by the scaling algorithm
@@ -498,11 +511,12 @@ cdef class Renderer:
         #variables for controlling what gets rendered and when
         self.shouldDraw=<bint>True
         self.oldSize=(0,0)
-        self.framebufferAccessLock:threading.Lock=threading.Lock()
+        self.frameBufferSwapLock:threading.Lock=threading.Lock()
 
         #the main sub modules of the renderer
         self.currentDisplayListManager=NULL
         self.currentSceneManager=NULL
+        self.newFrameTrigger=NULL
 
     cpdef start(self,int internalDisplayWidth, int internalDisplayHeight, tuple clearColor, tuple backgroundColor, int scaleStepSize,int targetFrameRate,int startingLayerCount,long startingCameraX=0, long startingCameraY=0):
         #make sure the display is inactive
@@ -526,8 +540,10 @@ cdef class Renderer:
         self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
 
         #release the lock if it is held
-        if(self.framebufferAccessLock.locked()):
-            self.framebufferAccessLock.release()
+        if(self.frameBufferSwapLock.locked()):
+            self.frameBufferSwapLock.release()
+
+        self.newFrameTrigger=threading.Event()
         
         #init the main sub modules
         self.currentSceneManager=SceneManager(startingLayerCount,startingCameraX,startingCameraY,self.internalWidth,self.internalHeight)#ignore these errors, its just the langauge server getting confused by cython
@@ -542,11 +558,63 @@ cdef class Renderer:
             #reset these to default
             self.scaledDisplayRect=[0,0,self.internalWidth,self.internalHeight]
             self.integerBufferSize=[self.internalWidth,self.internalHeight]
-            self.scaledSize=[0,0]
-            self.scaledDisplayOffset=[0,0]
+            
+            
             self.shouldSmoothScale=<bint>False
             self.shouldDraw=<bint>True
             self.oldSize=(0,0)
+            self.scaledDisplayOffsetX=0
+            self.scaledDisplayOffsetY=0
+            self.intScalingValue=0
+            self.floatScalingValue=0
+            self.scaledWidth=0
+            self.scaledHeight=0
+
+    cpdef SceneManager getCurrentSceneManager(self):
+        if(self.started):
+            return self.currentSceneManager
+        else:
+            raise TKSExceptions.RendererNotStartedError("Error: cannot get scene manager before scene manager is created. renderer must be started first.")
+
+    
+    cpdef _calculateScaling(self,tuple screenSize):
+        #calculate the new integer scaling value, making sure it isnt below 1
+        intScalingValue=max(1,min((screenSize[0]//self.internalWidth),(screenSize[1]//self.internalHeight)))
+        #calculate the new float scale value, making sure it isn't below 1, and adjust it for steps
+        floatScalingValue=round(max(1,min((screenSize[0]/self.internalWidth),(screenSize[1]/self.internalHeight)))/self.scaleStepSize) * self.scaleStepSize
+
+        #turn off smooth scaling if unnecessary
+        if((floatScalingValue-intScalingValue)>(self.scaleStepSize//100)):
+            self.shouldSmoothScale=<bint>True
+        else:
+            self.shouldSmoothScale=<bint>False
+
+        #update the intermediate scaled size value
+        self.scaledWidth=<int> (self.internalWidth * floatScalingValue)
+        self.scaledHeight=<int> (self.internalHeight * floatScalingValue)
+        #update the letterbox viewport rect
+        #adust the width
+        self.scaledDisplayRect[2]=self.scaledWidth
+        #adjust the height
+        self.scaledDisplayRect[3]=self.scaledHeight
+        #update the intermediate offset values
+        self.scaledDisplayOffsetX=((self.oldSize[0]-self.scaledWidth)//2)
+        self.scaledDisplayOffsetY=((self.oldSize[1]-self.scaledHeight)//2)
+        #adjust the x offset
+        self.scaledDisplayRect[0]=self.scaledDisplayOffsetX
+        self.scaledDisplayRect[1]=self.scaledDisplayOffsetY
+        #get a new renderer subsurface for that viewport, leaving the rest as letterbox
+        self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+        #handle integer scaling
+        self.integerBufferSize[0]=self.internalWidth * intScalingValue
+        self.integerBufferSize[1]=self.internalHeight * intScalingValue
+
+
+    
+
+
+
+
 
 
         
