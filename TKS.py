@@ -45,7 +45,10 @@ def getImageSize(image:pygame.Surface):
 
 
 
+#TODO: implement vfx controller class, and add two slots for them in the render
+#one slot for the game, one slot for the 
 
+#TODO: implement ui manager and controller classes
 
 
 #no fullscreen effects processor system implemented, may be done later if needed
@@ -143,7 +146,7 @@ class Renderer:
             #cache the current screensize for size checking
             self.lastSize=screenSize
             #clear the screen
-            self.screen.fill((0,0,0))
+            self.screen.fill(backgroundColor)
             #set the wait state flag so the go around system has a shred of a chance of working
             self.notBusyDrawing.clear()
             #acquire the framebuffer access lock

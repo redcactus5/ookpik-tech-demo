@@ -37,11 +37,6 @@ cdef class Camera:
         self.width=newWidth
         self.height=newHeight
 
-    
-
-
-
-#need to create the fast renderer class and scene manager class and possibly window manager class
 
 
 cdef class DisplayListManager:
@@ -72,7 +67,7 @@ cdef class DisplayListManager:
 
 
     
-    cpdef list[list] generateDisplayList(self, list[set[SpriteCore]] internalLayersReference, Camera cameraReference):
+    cpdef list[list] generateDisplayList(self, list[list[SpriteCore]] internalLayersReference, Camera cameraReference):
         #cache the camera positions
         cdef Camera camera=cameraReference
         cdef int cameraLeft=camera.x
@@ -109,10 +104,10 @@ cdef class DisplayListManager:
 
 
         #create some variables for objects
-        cdef set layerRef
-        cdef SpriteCore SpriteData
+        cdef list layerRef
         cdef AnimationControllerCore animationController
         cdef ImageSize frameSize
+        cdef SpriteCore sprite
 
         #variables for the four corners and coords
         cdef int spriteLeft
@@ -134,14 +129,14 @@ cdef class DisplayListManager:
         for layer in internalLayersReference:
             layerRef=layer
             for sprite in layerRef:
-                SpriteData:SpriteCore=sprite.core
+                
                 #early visibility check optimisation
-                if(SpriteData.visible):
+                if(sprite.visible):
                     #load the sprite's position and image data
-                    animationController=SpriteData.animationController
+                    animationController=sprite.animationController
                     frameSize=animationController.currentFrameSize
-                    spriteX=SpriteData.x+SpriteData.imageOffsetX
-                    spriteY=SpriteData.y+SpriteData.imageOffsetY
+                    spriteX=sprite.x+sprite.imageOffsetX
+                    spriteY=sprite.y+sprite.imageOffsetY
                     spriteLeft=spriteX
                     spriteRight=spriteLeft+frameSize.width
                     spriteTop=spriteY
@@ -173,11 +168,6 @@ cdef class DisplayListManager:
 
 
 
-
-
-
-
-
 cdef class SceneManager:
     cdef Camera currentCamera
     cdef list[list[TKSSprites.BasicSprite]] layers
@@ -186,9 +176,9 @@ cdef class SceneManager:
     cdef list[Camera] cameras
     
 
-    def __cinit__(self,int startingLayerCount,long startingCameraX, long startingCameraY, int internalWidth,int internalHeight):
+    def __cinit__(self,int startingLayerCount,long startingCameraX, long startingCameraY, int startingCameraWidth,int StartingCameraHeight):
         #init the starting camera
-        self.currentCamera=Camera(startingCameraX,startingCameraY,internalWidth,internalHeight)#ignore the error, thats just the language server getting confused
+        self.currentCamera=Camera(startingCameraX,startingCameraY,startingCameraWidth,StartingCameraHeight)#ignore the error, thats just the language server getting confused
 
         #init the cameraList
         self.cameras=[self.currentCamera]
@@ -432,15 +422,13 @@ cdef class SceneManager:
         
 
 
-
-
-
 #switched back to triple buffering because multithreaded double buffering was getting to be too much trouble
 cdef class Renderer:
     #configuration settings
     cdef int internalWidth
     cdef int internalHeight
     cdef tuple clearColor
+    cdef tuple backgroundColor
     cdef int targetFrameRate
     #the frameBuffer and different render caches
     cdef pygame.Surface screen
@@ -463,8 +451,108 @@ cdef class Renderer:
     cdef bint shouldSmoothScale
     #the flag to determine if we should draw
     cdef bint shouldDraw
-    cdef list[int] oldSize
+    cdef tuple oldSize
     cdef threading.Lock frameBufferSwapLock
+
+    #just a flag to early exit if we arent started
+    cdef bint started
+
+    #the current scene manager object
+    cdef SceneManager currentSceneManager
+
+    cdef DisplayListManager currentDisplayListManager
+
+
+    def __cinit__(self):
+        #init the variables of the object for safety
+        self.started=<bint>False
+        #set the internal display resolution
+        self.internalWidth=0
+        self.internalHeight=0
+        #init the surface pointers to null for safety
+        self.screen=NULL
+        self.letterBoxViewPort=NULL
+        self.integerScaleBuffer=NULL
+        self.displayFrameBuffer=NULL
+        self.renderFramebuffer=NULL
+        self.transferBuffer=NULL
+        self.menuFrameBuffer=NULL
+        #set the color to clear the display, and the background/letterbox color
+        self.clearColor=NULL
+        self.backgroundColor=NULL
+        self.targetFrameRate=0
+
+        #init the values used for smooth scaling
+        self.scaledDisplayRect=[0,0,self.internalWidth,self.internalHeight]
+        
+        self.integerBufferSize=[self.internalWidth,self.internalHeight]
+        
+        self.scaledSize=[0,0]
+        
+        self.scaledDisplayOffset=[0,0]
+        #the size of the steps that the window will scale by
+        self.scaleStepSize=20
+        #enables or disables smooth scaling if needed or not as determined by the scaling algorithm
+        self.shouldSmoothScale=<bint>False
+
+        #variables for controlling what gets rendered and when
+        self.shouldDraw=<bint>True
+        self.oldSize=(0,0)
+        self.framebufferAccessLock:threading.Lock=threading.Lock()
+
+        #the main sub modules of the renderer
+        self.currentDisplayListManager=NULL
+        self.currentSceneManager=NULL
+
+    cpdef start(self,int internalDisplayWidth, int internalDisplayHeight, tuple clearColor, tuple backgroundColor, int scaleStepSize,int targetFrameRate,int startingLayerCount,long startingCameraX=0, long startingCameraY=0):
+        #make sure the display is inactive
+        if(pygame.display.get_active()):
+            pygame.display.quit()
+
+        #set the internal display resolution
+        self.internalWidth=internalDisplayWidth
+        self.internalHeight=internalDisplayHeight
+        #set the important colors
+        self.clearColor=clearColor
+        self.backgroundColor=backgroundColor
+        #set the config values
+        self.scaledStepSize=scaleStepSize
+        self.targetFrameRate=targetFrameRate
+
+
+        self.screen=pygame.display.set_mode(size=(self.internalWidth, self.internalHeight),vsync=1, flags=pygame.DOUBLEBUF|pygame.RESIZABLE|pygame.SCALED)
+        self.integerScaleBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+
+        #release the lock if it is held
+        if(self.framebufferAccessLock.locked()):
+            self.framebufferAccessLock.release()
+        
+        #init the main sub modules
+        self.currentSceneManager=SceneManager(startingLayerCount,startingCameraX,startingCameraY,self.internalWidth,self.internalHeight)#ignore these errors, its just the langauge server getting confused by cython
+        self.currentDisplayListManager=DisplayListManager(targetFrameRate)
+
+        #raise the initialized flag
+        self.started=<bint> True
+
+    cpdef reset(self):
+        if(self.started):
+            self.start(self.internalWidth,self.internalHeight,self.clearColor,self.backgroundColor,self.scaledStepSize,self.targetFrameRate,self.currentSceneManager.getLayerCount())
+            #reset these to default
+            self.scaledDisplayRect=[0,0,self.internalWidth,self.internalHeight]
+            self.integerBufferSize=[self.internalWidth,self.internalHeight]
+            self.scaledSize=[0,0]
+            self.scaledDisplayOffset=[0,0]
+            self.shouldSmoothScale=<bint>False
+            self.shouldDraw=<bint>True
+            self.oldSize=(0,0)
+
+
+        
+
+
+        
 
 
 
