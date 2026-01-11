@@ -431,22 +431,32 @@ cdef class Renderer:
     cdef tuple clearColor
     cdef tuple backgroundColor
     cdef int targetFrameRate
-    #the frameBuffer and different render caches
+    #the window
     cdef pygame.Surface screen
+    #the scaling framebuffers
     cdef pygame.Surface letterBoxViewPort
     cdef pygame.Surface integerScaleBuffer
+    #the framebuffer cache
     cdef pygame.Surface displayFrameBuffer
-    cdef pygame.Surface renderFramebuffer
-    cdef pygame.Surface transferBuffer
+    #the framebuffer
+    cdef pygame.Surface renderFrameBuffer
+    #transfer slot buffer
+    cdef pygame.Surface transferFrameBuffer
+    #the framebuffer for the menus
     cdef pygame.Surface menuFrameBuffer
+
+    #just used an an intermidate for buffer swapping
+    cdef pygame.Surface framebufferSwapPointer
 
     #fancy scaling values
     cdef list[int] scaledDisplayRect
     cdef list[int] integerBufferSize
     cdef int scaledWidth
     cdef int scaledHeight
+    cdef list[int] scaledSize
     cdef int scaledDisplayOffsetX
     cdef int scaledDisplayOffsetY
+    cdef list[int] scaledDisplayOffset
 
     #the steps in which the smooth scaling will increase
     cdef int scaledStepSize
@@ -485,9 +495,10 @@ cdef class Renderer:
         self.letterBoxViewPort=NULL
         self.integerScaleBuffer=NULL
         self.displayFrameBuffer=NULL
-        self.renderFramebuffer=NULL
-        self.transferBuffer=NULL
+        self.renderFrameBuffer=NULL
+        self.transferFrameBuffer=NULL
         self.menuFrameBuffer=NULL
+        self.framebufferSwapPointer=NULL
         #set the color to clear the display, and the background/letterbox color
         self.clearColor=NULL
         self.backgroundColor=NULL
@@ -502,6 +513,8 @@ cdef class Renderer:
         self.scaledDisplayOffsetY=0
         self.intScalingValue=0
         self.floatScalingValue=0
+        self.scaledDisplayOffset=NULL
+        self.scaledSize=NULL
         
         #the size of the steps that the window will scale by
         self.scaleStepSize=20
@@ -512,6 +525,7 @@ cdef class Renderer:
         self.shouldDraw=<bint>True
         self.oldSize=(0,0)
         self.frameBufferSwapLock:threading.Lock=threading.Lock()
+        self.newFrameTrigger:threading.Event=threading.Event()
 
         #the main sub modules of the renderer
         self.currentDisplayListManager=NULL
@@ -533,21 +547,24 @@ cdef class Renderer:
         self.scaledStepSize=scaleStepSize
         self.targetFrameRate=targetFrameRate
 
+        self.scaledSize=[0,0]
+        self.scaledDisplayOffset=[0,0]
 
         self.screen=pygame.display.set_mode(size=(self.internalWidth, self.internalHeight),vsync=1, flags=pygame.DOUBLEBUF|pygame.RESIZABLE|pygame.SCALED)
         self.integerScaleBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
+        self.framebufferSwapPointer=NULL
 
         #release the lock if it is held
         if(self.frameBufferSwapLock.locked()):
             self.frameBufferSwapLock.release()
 
-        self.newFrameTrigger=threading.Event()
+        self.newFrameTrigger:threading.Event=threading.Event()
         
         #init the main sub modules
-        self.currentSceneManager=SceneManager(startingLayerCount,startingCameraX,startingCameraY,self.internalWidth,self.internalHeight)#ignore these errors, its just the langauge server getting confused by cython
-        self.currentDisplayListManager=DisplayListManager(targetFrameRate)
+        self.currentSceneManager:SceneManager=SceneManager(startingLayerCount,startingCameraX,startingCameraY,self.internalWidth,self.internalHeight)#ignore these errors, its just the langauge server getting confused by cython
+        self.currentDisplayListManager:DisplayListManager=DisplayListManager(targetFrameRate)
 
         #raise the initialized flag
         self.started=<bint> True
@@ -592,22 +609,98 @@ cdef class Renderer:
         #update the intermediate scaled size value
         self.scaledWidth=<int> (self.internalWidth * floatScalingValue)
         self.scaledHeight=<int> (self.internalHeight * floatScalingValue)
+        #update the intermediate offset values
+        self.scaledDisplayOffsetX=((self.oldSize[0]-self.scaledWidth)//2)
+        self.scaledDisplayOffsetY=((self.oldSize[1]-self.scaledHeight)//2)
         #update the letterbox viewport rect
         #adust the width
         self.scaledDisplayRect[2]=self.scaledWidth
         #adjust the height
         self.scaledDisplayRect[3]=self.scaledHeight
-        #update the intermediate offset values
-        self.scaledDisplayOffsetX=((self.oldSize[0]-self.scaledWidth)//2)
-        self.scaledDisplayOffsetY=((self.oldSize[1]-self.scaledHeight)//2)
         #adjust the x offset
         self.scaledDisplayRect[0]=self.scaledDisplayOffsetX
+        #adjust the y offset
         self.scaledDisplayRect[1]=self.scaledDisplayOffsetY
-        #get a new renderer subsurface for that viewport, leaving the rest as letterbox
-        self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
         #handle integer scaling
         self.integerBufferSize[0]=self.internalWidth * intScalingValue
         self.integerBufferSize[1]=self.internalHeight * intScalingValue
+        #update the pseudo tuples used by the engine for scaling and offsetting the viewport
+        self.scaledDisplayOffset[0]=self.scaledDisplayOffsetX
+        self.scaledDisplayOffset[1]=self.scaledDisplayOffsetY
+        self.scaledSize[0]=self.scaledWidth
+        self.scaledSize[1]=self.scaledHeight
+        #get a new renderer subsurface for that viewport, leaving the rest as letterbox
+        self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+
+
+    cpdef frameTick(self):
+        #get the current window size
+        screenSize=self.screen.get_size()
+
+        #if the screensize has changed
+        if((self.oldSize!=screenSize)):
+            #clear the new frame trigger if it has been set
+            self.newFrameTrigger.clear()
+            if((screenSize[0]!=0)and(screenSize[1]!=0)):
+                #adjust the screen scaling
+                self._calculateScaling(screenSize)
+                #set the should draw flag so we update the screen with the new size
+                self.shouldDraw=<bint>True
+
+        #otherwise check if there are any new frames to draw and set the flag if so
+        elif(self.newFrameTrigger.is_set()):
+            #clear the trigger
+            self.newFrameTrigger.clear()
+            self.shouldDraw=<bint>True
+
+        #if there is a reason to draw a new frame
+        if(self.shouldDraw):
+            #cache the current screensize for size checking
+            self.oldSize=screenSize
+            #clear the screen
+            self.screen.fill(self.backgroundColor)
+            
+            
+            #acquire the framebuffer access lock
+            with self.frameBufferSwapLock:
+                #swap the buffers
+                self.framebufferSwapPointer=self.displayFrameBuffer
+                self.displayFrameBuffer=self.transferFrameBuffer
+                self.transferFrameBuffer=self.framebufferSwapPointer
+                self.framebufferSwapPointer=NULL
+            
+            pygame.transform.scale(self.displayFrameBuffer,self.integerBufferSize,self.integerScaleBuffer)
+            
+            
+            #depending on if smooth scaling is turned on:
+            if(self.shouldSmoothScale):
+                #smooth scale to the screen
+                pygame.transform.smoothscale(self.integerScaleBuffer,self.scaledSize,self.letterboxViewPort)
+            else:
+                #blit to the screen
+                self.letterboxViewPort.blit(self.integerScaleBuffer,self.scaledDisplayOffset)
+            #flip the display
+            pygame.display.flip()
+            #reset the should draw flag
+            self.shouldDraw=False
+
+
+    def render(self):
+        #hyperoptimized render code
+        #use a cython version of the above to increase speed
+        displayList:list=self.currentDisplayListManager.generateDisplayList(self.currentSceneManager._getInternalLayers(),self.currentSceneManager.getCurrentCamera())
+        self.renderFrameBuffer.fill(self.clearColor,special_flags=self.clearFlag)
+        self.renderFrameBuffer.blits(displayList)
+        #put render menu code here
+        with self.frameBufferSwapLock:
+            self.framebufferSwapPointer=self.transferFrameBuffer
+            self.transferFrameBuffer=self.renderFrameBuffer
+            self.renderFrameBuffer=self.framebufferSwapPointer
+            self.framebufferSwapPointer=NULL
+        self.newFrameTrigger.set()
+
+        
+
 
 
     
