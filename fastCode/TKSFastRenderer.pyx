@@ -70,6 +70,7 @@ cdef class DisplayListManager:
     
     cpdef list[list] generateDisplayList(self, list[list[SpriteCore]] internalLayersReference, Camera cameraReference):
         #cache the camera positions
+
         cdef Camera camera=cameraReference
         cdef int cameraLeft=camera.x
         cdef int cameraRight=camera.x+camera.width
@@ -484,6 +485,8 @@ cdef class Renderer:
     #the trigger for rendering the next frame
     cdef threading.Event newFrameTrigger
 
+    cdef list[int] scalingDataPacket
+
     def __cinit__(self):
         #init the variables of the object for safety
         self.started=<bint>False
@@ -515,6 +518,7 @@ cdef class Renderer:
         self.floatScalingValue=0
         self.scaledDisplayOffset=NULL
         self.scaledSize=NULL
+        self.scalingDataPacket=NULL
         
         #the size of the steps that the window will scale by
         self.scaleStepSize=20
@@ -549,8 +553,8 @@ cdef class Renderer:
 
         self.scaledSize=[0,0]
         self.scaledDisplayOffset=[0,0]
-
-        self.screen=pygame.display.set_mode(size=(self.internalWidth, self.internalHeight),vsync=1, flags=pygame.DOUBLEBUF|pygame.RESIZABLE|pygame.SCALED)
+        self.scalingDataPacket=[0,0,0,0]
+        self.screen=pygame.display.set_mode(size=(self.internalWidth, self.internalHeight),vsync=1, flags=pygame.DOUBLEBUF|pygame.RESIZABLE)
         self.integerScaleBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.displayFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
         self.renderFrameBuffer=pygame.Surface((self.internalWidth,self.internalHeight))
@@ -631,6 +635,13 @@ cdef class Renderer:
         self.scaledSize[1]=self.scaledHeight
         #get a new renderer subsurface for that viewport, leaving the rest as letterbox
         self.letterboxViewPort=self.displayFrameBuffer.subsurface(self.scaledDisplayRect)
+
+    cpdef list[int] getWindowData(self):
+        self.scalingDataPacket[0]=self.scaledWidth
+        self.scalingDataPacket[1]=self.scaledHeight
+        self.scalingDataPacket[2]=self.scaledDisplayOffsetX
+        self.scalingDataPacket[3]=self.scaledDisplayOffsetY
+
 
 
     cpdef frameTick(self):

@@ -51,7 +51,7 @@ def getImageSize(image:pygame.Surface):
 #TODO: implement ui manager and controller classes
 
 
-
+#TODO: add a reference keeper object backbone to streamline inter object communication and startup/shutdown
 
 
 class Core:
