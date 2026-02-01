@@ -1,0 +1,6 @@
+
+2. switch to pysdl2
+3. add layer movement and rotation variables
+4. add camera rotation variables
+5. add spine class
+6. 

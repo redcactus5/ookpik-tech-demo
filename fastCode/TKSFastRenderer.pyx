@@ -1,8 +1,6 @@
-import numpy as np
-cimport numpy as np
 
-import pygame
-import pygame_gui
+
+
 from fastCode.TKSFastSprites cimport SpriteCore,AnimationControllerCore,TileSpriteCore,ImageSize,AnimationFrames
 import TKSSprites
 import threading
@@ -13,11 +11,14 @@ cdef class Camera:
     cdef public long y
     cdef public int width
     cdef public int height
-    def __cinit__(self,long x,long y,int width,int height,str name) -> None:
+    cdef public float rotation
+    def __cinit__(self,long x,long y,int width,int height, float rotation, str name) -> None:
         self.x=x
         self.y=y
         self.width=width
         self.height=height
+        self.rotation=rotation
+
         self.name=name
     
     def __init__(self,x=0,y=0,width=0,height=0) -> None:
@@ -44,12 +45,10 @@ cdef class DisplayListManager:
     cdef int fps
     cdef list displayList
     cdef int frameCounter
-    cdef object averagingNumbersBackend
-    cdef long averagingNumber
     cdef long averageSize
     cdef long lastAverage
     cdef object append
-    cdef object clear
+
 
     
 
@@ -59,8 +58,8 @@ cdef class DisplayListManager:
         self.fps=fps * 15
         self.frameCounter=0
         self.averageSize=0
+        self.lastAverage=0
         
-        self.averagingNumbersBackend=np.zeros(self.fps, dtype=np.int32)
         self.append = self.displayList.append
 
 
@@ -80,8 +79,7 @@ cdef class DisplayListManager:
         #cache the reference to internalLayers
         cdef list internalLayers=internalLayersReference
         
-        #hoop jumping to use memory views because cython is picky
-        cdef int[:] averagingNumbersWindow = self.averagingNumbersBackend
+        
 
         #this check runs roughly every 15 seconds and is designed to take a memory allocation hit 
         #to free shadow allocated memory if the predicted shadow allocation exceeds the current average usage
@@ -89,13 +87,13 @@ cdef class DisplayListManager:
         if(self.frameCounter>self.fps):
             #reset the counter and average
             self.frameCounter=0
-            self.lastAverage=self.averageSize
+            
 
             #use numpy to add all the entries
-            self.averageSize=np.sum(self.averagingNumbersBackend)
+            
 
             #then divide by how many there were to get the average
-            self.averageSize = self.averageSize//self.averagingNumbersBackend.size
+            self.averageSize = (self.averageSize+self.lastAverage)//self.fps
 
             if(self.lastAverage>=(self.averageSize * 2)):
                 #allocate a new display list to reset the buffer
@@ -103,6 +101,8 @@ cdef class DisplayListManager:
 
                 #reset the prefetched functions to the new list
                 self.append = self.displayList.append
+
+            self.lastAverage=self.averageSize
 
 
         #create some variables for objects
@@ -163,7 +163,7 @@ cdef class DisplayListManager:
             #delete it
             del self.displayList[spriteCount:]
         #store the final sprite count
-        averagingNumbersWindow[self.frameCounter]=max(0,spriteCount-1)
+        
         #increment the shadow memory usage check timer
         self.frameCounter+=1
         return self.displayList
