@@ -1,6 +1,16 @@
+switch to pysdl2
 
-2. switch to pysdl2
-3. add layer movement and rotation variables
-4. add camera rotation variables
-5. add spine class
-6. 
+implement new spine class
+
+add rotation variables to sprites
+
+rework animation system for pysdl2 and new texture management system based on active animations over time
+
+implement full renderer rewrite for pysdl2 supporting sprite rotation
+
+remember to cache the camera referenced position for sprites on screen after transformation
+
+write texture management system
+
+write event sorting system
+ 
