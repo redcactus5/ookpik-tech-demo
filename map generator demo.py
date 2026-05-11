@@ -245,7 +245,7 @@ def renderMapList(mapList,currentOpp):
 
     clear()
     print(renderedMap,end="")
-    time.sleep(0.005)
+    time.sleep(0.001)
 
 
 
@@ -793,7 +793,7 @@ def mainMenu():
     global TREES
     global SEEDS
     global OWLPIC
-    tkinter_renderer.initTkinterWindow(MAPWIDTH,MAPHEIGHT,16,"ookpik map generation engine tech demo v2.0")
+    
     while True:
         userInput=multipleChoiceScreen("ookpik map generation engine tech demo v2.0"+"\n\n"+OWLPIC,("(s)tart generation","(q)uit"),("s","q","e"),1)
 
